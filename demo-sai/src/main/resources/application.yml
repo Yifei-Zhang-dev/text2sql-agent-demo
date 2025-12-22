@@ -20,10 +20,18 @@ spring:
 # MCP Server Configuration
 mcp:
   server:
-    base-url: http://localhost:8083
+    base-url: http://127.0.0.1:8083
 
 server:
   port: 8081
+
+# Swagger UI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
 
 management:
   endpoints:

@@ -2,8 +2,11 @@ package com.example.demo.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
@@ -16,25 +19,50 @@ import java.util.Map;
 public class McpToolService {
 
     private final WebClient mcpWebClient;
+    
+    // 用于跟踪最后执行的 SQL
+    private static final ThreadLocal<String> lastExecutedSql = new ThreadLocal<>();
 
     /**
      * 调用 schema.get 工具
      */
     public String getSchema(String tableName) {
-        log.info("调用 MCP Tool: schema.get, table={}", tableName);
+        log.info("=== 调用 MCP Tool: schema.get ===");
+        log.info("请求参数: table={}", tableName);
 
         try {
+            Map<String, Object> requestBody = Map.of("table", tableName);
+            log.info("请求体: {}", requestBody);
+
             Map<String, Object> response = mcpWebClient.post()
                     .uri("/mcp/tools/schema.get")
-                    .bodyValue(Map.of("table", tableName))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
                     .retrieve()
+                    .onStatus(status -> !status.is2xxSuccessful(),
+                            clientResponse -> {
+                                log.error("HTTP 错误状态: {}", clientResponse.statusCode());
+                                return clientResponse.bodyToMono(String.class)
+                                        .flatMap(body -> {
+                                            log.error("错误响应体: {}", body);
+                                            return Mono.error(new RuntimeException(
+                                                    "HTTP " + clientResponse.statusCode() + ": " + body));
+                                        });
+                            })
                     .bodyToMono(Map.class)
+                    .doOnError(error -> log.error("请求失败: {}", error.getMessage()))
                     .block();
 
-            log.info("schema.get 响应: {}", response);
+            log.info("schema.get 成功响应: {}", response);
             return formatSchemaResponse(response);
+        } catch (WebClientResponseException e) {
+            log.error("=== schema.get HTTP 错误 ===");
+            log.error("状态码: {}", e.getStatusCode());
+            log.error("响应头: {}", e.getHeaders());
+            log.error("响应体: {}", e.getResponseBodyAsString());
+            return "获取表结构失败 [HTTP " + e.getStatusCode() + "]: " + e.getResponseBodyAsString();
         } catch (Exception e) {
-            log.error("schema.get 调用失败", e);
+            log.error("=== schema.get 调用异常 ===", e);
             return "获取表结构失败: " + e.getMessage();
         }
     }
@@ -43,22 +71,54 @@ public class McpToolService {
      * 调用 sql.run 工具
      */
     public String runSql(String sql) {
-        log.info("调用 MCP Tool: sql.run, sql={}", sql);
+        log.info("=== 调用 MCP Tool: sql.run ===");
+        log.info("SQL: {}", sql);
+        
+        // 保存 SQL 到 ThreadLocal
+        lastExecutedSql.set(sql);
 
         try {
+            Map<String, Object> requestBody = Map.of("sql", sql);
+            log.info("请求体: {}", requestBody);
+
             Map<String, Object> response = mcpWebClient.post()
                     .uri("/mcp/tools/sql.run")
-                    .bodyValue(Map.of("sql", sql))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
                     .retrieve()
+                    .onStatus(status -> !status.is2xxSuccessful(),
+                            clientResponse -> {
+                                log.error("HTTP 错误状态: {}", clientResponse.statusCode());
+                                return clientResponse.bodyToMono(String.class)
+                                        .flatMap(body -> {
+                                            log.error("错误响应体: {}", body);
+                                            return Mono.error(new RuntimeException(
+                                                    "HTTP " + clientResponse.statusCode() + ": " + body));
+                                        });
+                            })
                     .bodyToMono(Map.class)
+                    .doOnError(error -> log.error("请求失败: {}", error.getMessage()))
                     .block();
 
-            log.info("sql.run 响应: {}", response);
+            log.info("sql.run 成功响应: {}", response);
             return formatSqlResponse(response);
+        } catch (WebClientResponseException e) {
+            log.error("=== sql.run HTTP 错误 ===");
+            log.error("状态码: {}", e.getStatusCode());
+            log.error("响应头: {}", e.getHeaders());
+            log.error("响应体: {}", e.getResponseBodyAsString());
+            return "SQL 执行失败 [HTTP " + e.getStatusCode() + "]: " + e.getResponseBodyAsString();
         } catch (Exception e) {
-            log.error("sql.run 调用失败", e);
+            log.error("=== sql.run 调用异常 ===", e);
             return "SQL 执行失败: " + e.getMessage();
         }
+    }
+    
+    /**
+     * 获取最后执行的 SQL
+     */
+    public static String getLastExecutedSql() {
+        return lastExecutedSql.get();
     }
 
     /**

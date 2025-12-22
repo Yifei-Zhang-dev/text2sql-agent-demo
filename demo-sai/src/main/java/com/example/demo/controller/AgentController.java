@@ -2,14 +2,18 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.Text2SqlRequest;
 import com.example.demo.dto.Text2SqlResponse;
+import com.example.demo.service.McpToolService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Agent 控制器 - Text-to-SQL 功能
@@ -18,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/agent")
 @RequiredArgsConstructor
+@Tag(name = "Agent API", description = "智能代理接口，支持自然语言转 SQL 查询")
 public class AgentController {
 
     private final ChatModel chatModel;
@@ -25,6 +30,7 @@ public class AgentController {
     /**
      * POST /agent/text2sql - 自然语言转 SQL 并执行
      */
+    @Operation(summary = "自然语言转 SQL", description = "输入自然语言问题，自动生成 SQL 并执行，返回查询结果和解释")
     @PostMapping("/text2sql")
     public Text2SqlResponse text2Sql(@RequestBody Text2SqlRequest request) {
         log.info("\n========== Text-to-SQL 请求开始 ==========");
@@ -65,14 +71,18 @@ public class AgentController {
                     .chatResponse();
 
             String response = chatResponse.getResult().getOutput().getContent();
+            
+            // 从 McpToolService 获取最后执行的 SQL
+            String executedSql = McpToolService.getLastExecutedSql();
 
             log.info("LLM 最终响应: {}", response);
+            log.info("提取的 SQL: {}", executedSql);
             log.info("Token 使用情况: {}", chatResponse.getMetadata().getUsage());
             log.info("========== Text-to-SQL 请求完成 ==========\n");
 
             // 返回结构化响应
             return new Text2SqlResponse(
-                    extractSqlFromResponse(response),
+                    executedSql != null ? executedSql : "（未检测到 SQL）",
                     response,
                     "查询完成"
             );
@@ -90,6 +100,7 @@ public class AgentController {
     /**
      * POST /agent/chat - 通用对话接口（可选）
      */
+    @Operation(summary = "通用对话", description = "与 LLM 进行通用对话（不使用工具）")
     @PostMapping("/chat")
     public String chat(@RequestBody String message) {
         log.info("收到对话请求: {}", message);
@@ -104,26 +115,5 @@ public class AgentController {
             log.error("对话失败", e);
             return "对话失败: " + e.getMessage();
         }
-    }
-
-    /**
-     * 从 LLM 响应中提取 SQL（简单实现）
-     */
-    private String extractSqlFromResponse(String response) {
-        // 简单的 SQL 提取逻辑（查找 SELECT 语句）
-        if (response.contains("SELECT") || response.contains("select")) {
-            int startIdx = response.toUpperCase().indexOf("SELECT");
-            if (startIdx != -1) {
-                int endIdx = response.indexOf(";", startIdx);
-                if (endIdx == -1) {
-                    endIdx = response.indexOf("\n\n", startIdx);
-                }
-                if (endIdx == -1) {
-                    endIdx = response.length();
-                }
-                return response.substring(startIdx, endIdx).trim();
-            }
-        }
-        return "（未检测到 SQL）";
     }
 }

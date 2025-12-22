@@ -3,10 +3,12 @@ package com.example.mcp.controller;
 import com.example.mcp.dto.*;
 import com.example.mcp.service.DatabaseService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/mcp")
 @RequiredArgsConstructor
@@ -72,7 +74,18 @@ public class McpController {
      */
     @PostMapping("/tools/schema.get")
     public SchemaResponse getSchema(@RequestBody SchemaRequest request) {
-        return databaseService.getTableSchema(request.getTable());
+        log.info("=== 收到 schema.get 请求 ===");
+        log.info("请求体: {}", request);
+        log.info("表名: {}", request.getTable());
+        
+        try {
+            SchemaResponse response = databaseService.getTableSchema(request.getTable());
+            log.info("schema.get 成功响应: {}", response);
+            return response;
+        } catch (Exception e) {
+            log.error("=== schema.get 处理失败 ===", e);
+            throw e;
+        }
     }
 
     /**
@@ -80,7 +93,17 @@ public class McpController {
      */
     @PostMapping("/tools/sql.run")
     public SqlResponse runSql(@RequestBody SqlRequest request) {
-        return databaseService.executeSql(request.getSql());
+        log.info("=== 收到 sql.run 请求 ===");
+        log.info("SQL: {}", request.getSql());
+        
+        try {
+            SqlResponse response = databaseService.executeSql(request.getSql());
+            log.info("sql.run 成功响应: {}", response);
+            return response;
+        } catch (Exception e) {
+            log.error("=== sql.run 处理失败 ===", e);
+            throw e;
+        }
     }
 
     /**
