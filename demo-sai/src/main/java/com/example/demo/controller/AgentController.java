@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -24,44 +27,62 @@ public class AgentController {
      */
     @PostMapping("/text2sql")
     public Text2SqlResponse text2Sql(@RequestBody Text2SqlRequest request) {
-        log.info("收到 Text-to-SQL 请求: {}", request.getQuestion());
+        log.info("\n========== Text-to-SQL 请求开始 ==========");
+        log.info("用户问题: {}", request.getQuestion());
 
-        // 构建 System Prompt
+        // 优化的 System Prompt
         String systemPrompt = """
-            你是一个数据库助手。用户会用自然语言提问，你需要：
-            1. 先调用 schemaGet 工具获取相关表的结构
-            2. 根据表结构生成正确的 SQL 查询（仅 SELECT）
-            3. 调用 sqlRun 工具执行 SQL
-            4. 用中文简短解释查询结果
+            你是一个专业的数据库查询助手。请严格按照以下步骤操作：
 
-            可用表：customers（客户）、orders（订单）、order_items（订单项）
+            步骤 1: 分析用户问题，确定需要查询哪些表
+            步骤 2: 调用 schemaGet 工具获取表结构（可多次调用）
+            步骤 3: 根据表结构生成正确的 SQL（仅允许 SELECT 语句）
+            步骤 4: 调用 sqlRun 工具执行 SQL
+            步骤 5: 用中文简短解释查询结果（1-2 句话）
+
+            可用表：
+            - customers（客户表）：客户信息
+            - orders（订单表）：订单记录
+            - order_items（订单项表）：订单明细
+
+            注意事项：
+            - 必须先调用 schemaGet 再生成 SQL
+            - SQL 必须基于实际字段名（大小写敏感）
+            - 关联查询需要正确使用 JOIN
+            - 最后返回简短的中文解释
             """;
 
         try {
+            log.info("正在调用 LLM...");
+
             // 使用 Spring AI ChatClient 进行 Function Calling
-            String response = ChatClient.create(chatModel)
+            ChatResponse chatResponse = ChatClient.create(chatModel)
                     .prompt()
                     .system(systemPrompt)
                     .user(request.getQuestion())
-                    .functions("schemaGet", "sqlRun")  // 注册可用函数
+                    .functions("schemaGet", "sqlRun")
                     .call()
-                    .content();
+                    .chatResponse();
 
-            log.info("Agent 响应: {}", response);
+            String response = chatResponse.getResult().getOutput().getContent();
 
-            // 简化返回（实际应解析 LLM 响应提取 SQL 和结果）
+            log.info("LLM 最终响应: {}", response);
+            log.info("Token 使用情况: {}", chatResponse.getMetadata().getUsage());
+            log.info("========== Text-to-SQL 请求完成 ==========\n");
+
+            // 返回结构化响应
             return new Text2SqlResponse(
-                    "（由 LLM 生成）",
+                    extractSqlFromResponse(response),
                     response,
                     "查询完成"
             );
 
         } catch (Exception e) {
-            log.error("Text-to-SQL 执行失败", e);
+            log.error("========== Text-to-SQL 执行失败 ==========", e);
             return new Text2SqlResponse(
                     null,
                     "执行失败: " + e.getMessage(),
-                    "请检查问题描述或 LLM 配置"
+                    "请检查问题描述、MCP Server 状态或 LLM 配置"
             );
         }
     }
@@ -83,5 +104,26 @@ public class AgentController {
             log.error("对话失败", e);
             return "对话失败: " + e.getMessage();
         }
+    }
+
+    /**
+     * 从 LLM 响应中提取 SQL（简单实现）
+     */
+    private String extractSqlFromResponse(String response) {
+        // 简单的 SQL 提取逻辑（查找 SELECT 语句）
+        if (response.contains("SELECT") || response.contains("select")) {
+            int startIdx = response.toUpperCase().indexOf("SELECT");
+            if (startIdx != -1) {
+                int endIdx = response.indexOf(";", startIdx);
+                if (endIdx == -1) {
+                    endIdx = response.indexOf("\n\n", startIdx);
+                }
+                if (endIdx == -1) {
+                    endIdx = response.length();
+                }
+                return response.substring(startIdx, endIdx).trim();
+            }
+        }
+        return "（未检测到 SQL）";
     }
 }
