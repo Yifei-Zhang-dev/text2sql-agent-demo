@@ -6,7 +6,6 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="demo-sai" />
       </profile>
       <profile name="Annotation profile for Spring AI Demo" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -15,6 +14,7 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
         </processorPath>
+        <module name="demo-sai" />
         <module name="mcp-server" />
       </profile>
     </annotationProcessing>
