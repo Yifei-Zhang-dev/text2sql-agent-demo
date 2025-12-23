@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn clean compile:*)",
+      "Bash(tree:*)",
+      "Bash(dir /S /B demo-saiasrcmainjava*.java demo-saiasrcmainresources)",
+      "Bash(mvn clean package:*)",
+      "Bash(mvn dependency:tree:*)",
+      "Bash(timeout 30 mvn spring-boot:run:*)"
+    ]
+  }
+}

@@ -15,6 +15,7 @@
 
     <modules>
         <module>demo-sai</module>
+        <module>demo-saia</module>
         <module>mcp-server</module>
     </modules>
 
