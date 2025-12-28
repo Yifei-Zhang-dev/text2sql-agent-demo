@@ -1,4 +1,6 @@
-# Spring AI vs Spring AI Alibaba - PoC 对比总结
+# Spring AI vs Spring AI Alibaba 技术选型对比（PPT 专用）
+
+本文档用于技术选型 PPT，提供 **Spring AI** 和 **Spring AI Alibaba** 在 Text-to-SQL 场景下的全面对比。
 
 ## 快速验证（按顺序执行）
 

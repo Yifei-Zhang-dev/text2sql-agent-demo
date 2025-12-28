@@ -6,7 +6,9 @@
       "Bash(dir /S /B demo-saiasrcmainjava*.java demo-saiasrcmainresources)",
       "Bash(mvn clean package:*)",
       "Bash(mvn dependency:tree:*)",
-      "Bash(timeout 30 mvn spring-boot:run:*)"
+      "Bash(timeout 30 mvn spring-boot:run:*)",
+      "Bash(mvn:*)",
+      "Bash(dir /S /B demo-saisrcmainjava*.java demo-saisrcmainresources)"
     ]
   }
 }
