@@ -142,6 +142,48 @@
         .result-card.error .content {
             color: #d32f2f;
         }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .result-table th {
+            background: #667eea;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .result-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+        }
+        .result-table tr:last-child td {
+            border-bottom: none;
+        }
+        .result-table tr:hover {
+            background: #f5f5f5;
+        }
+        .table-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        .no-data {
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
         .spinner {
             display: inline-block;
             width: 16px;
@@ -196,7 +238,7 @@
     <div class="container">
         <div class="header">
             <h1>Spring AI Alibaba Demo - Text2SQL</h1>
-            <p>使用自然语言查询数据库，支持客户、订单和订单明细表（Powered by DashScope）</p>
+            <p>使用自然语言查询数据库，支持客户、订单和订单明细表</p>
         </div>
 
         <div class="content">
@@ -231,7 +273,7 @@
 
                 <div id="resultCard" class="result-card" style="display: none;">
                     <h3>查询结果</h3>
-                    <div class="content" id="resultContent"></div>
+                    <div id="resultContent"></div>
                 </div>
 
                 <div id="explanationCard" class="result-card" style="display: none;">
@@ -300,9 +342,41 @@
                     document.getElementById('sqlCard').style.display = 'block';
                 }
 
-                // Display Result
-                if (data.result) {
-                    document.getElementById('resultContent').textContent = data.result;
+                // Display Result (structured table)
+                if (data.result && data.result.columns && data.result.rows) {
+                    const resultContent = document.getElementById('resultContent');
+                    const result = data.result;
+
+                    if (result.rowCount === 0) {
+                        resultContent.innerHTML = '<div class="no-data">无数据</div>';
+                    } else {
+                        const maxRows = 20;
+                        const displayRows = result.rows.slice(0, maxRows);
+
+                        let tableHtml = '<table class="result-table"><thead><tr>';
+                        result.columns.forEach(col => {
+                            tableHtml += `<th>${escapeHtml(col)}</th>`;
+                        });
+                        tableHtml += '</tr></thead><tbody>';
+
+                        displayRows.forEach(row => {
+                            tableHtml += '<tr>';
+                            row.forEach(cell => {
+                                const cellValue = cell !== null && cell !== undefined ? escapeHtml(String(cell)) : '<i>null</i>';
+                                tableHtml += `<td>${cellValue}</td>`;
+                            });
+                            tableHtml += '</tr>';
+                        });
+
+                        tableHtml += '</tbody></table>';
+
+                        const infoText = result.rowCount > maxRows
+                            ? `共 ${result.rowCount} 行，已展示前 ${displayRows.length} 行`
+                            : `共 ${result.rowCount} 行`;
+                        tableHtml += `<div class="table-info">${infoText}</div>`;
+
+                        resultContent.innerHTML = tableHtml;
+                    }
                     document.getElementById('resultCard').style.display = 'block';
                 }
 
@@ -325,6 +399,12 @@
                 submitBtn.disabled = false;
                 btnText.textContent = '提交查询';
             }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Support Enter key to submit (Ctrl+Enter)

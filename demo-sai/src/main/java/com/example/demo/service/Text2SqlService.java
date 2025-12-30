@@ -68,27 +68,31 @@ public class Text2SqlService {
             // 获取 LLM 响应（使用 Spring AI 1.0.0 标准 API）
             String llmAnswer = chatResponse.getResult().getOutput().getText();
 
-            // 从 McpToolService 获取最后执行的 SQL
+            // 从 McpToolService 获取最后执行的 SQL 和查询结果
             String executedSql = McpToolService.getLastExecutedSql();
+            com.example.demo.dto.QueryResult queryResult = McpToolService.getLastQueryResult();
 
             log.info("LLM 最终响应: {}", llmAnswer);
             log.info("提取的 SQL: {}", executedSql);
+            if (queryResult != null) {
+                log.info("查询结果: {} 行, {} 列", queryResult.getRowCount(), queryResult.getColumns().size());
+            }
             log.info("Token 使用情况: {}", chatResponse.getMetadata().getUsage());
             log.info("========== Text-to-SQL 请求完成 ==========\n");
 
-            // 返回结构化响应
+            // 返回结构化响应（包含 SQL、结构化结果、LLM 解释）
             return new Text2SqlResponse(
                     executedSql != null ? executedSql : "（未检测到 SQL）",
-                    llmAnswer,
-                    "查询完成"
+                    queryResult,
+                    llmAnswer
             );
 
         } catch (Exception e) {
             log.error("========== Text-to-SQL 执行失败 ==========", e);
             return new Text2SqlResponse(
+                    "执行失败",
                     null,
-                    "执行失败: " + e.getMessage(),
-                    "请检查问题描述、MCP Server 状态或 LLM 配置"
+                    "执行失败: " + e.getMessage() + "\n请检查问题描述、MCP Server 状态或 LLM 配置"
             );
         }
     }

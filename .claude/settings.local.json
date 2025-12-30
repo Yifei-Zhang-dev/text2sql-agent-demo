@@ -8,7 +8,9 @@
       "Bash(mvn dependency:tree:*)",
       "Bash(timeout 30 mvn spring-boot:run:*)",
       "Bash(mvn:*)",
-      "Bash(dir /S /B demo-saisrcmainjava*.java demo-saisrcmainresources)"
+      "Bash(dir /S /B demo-saisrcmainjava*.java demo-saisrcmainresources)",
+      "Bash(find:*)",
+      "Bash(dir:*)"
     ]
   }
 }

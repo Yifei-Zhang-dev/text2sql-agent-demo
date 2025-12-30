@@ -12,8 +12,7 @@ spring:
       chat:
         enabled: true
         options:
-          # 尝试使用 qwen-turbo（更稳定）或 qwen-max
-          model: qwen-turbo
+          model: qwen-plus
           temperature: 0.0
           max-tokens: 2000
 

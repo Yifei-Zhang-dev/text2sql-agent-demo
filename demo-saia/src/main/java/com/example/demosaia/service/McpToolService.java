@@ -1,5 +1,6 @@
 package com.example.demosaia.service;
 
+import com.example.demosaia.dto.QueryResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -8,6 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -22,6 +24,9 @@ public class McpToolService {
 
     // 用于跟踪最后执行的 SQL
     private static final ThreadLocal<String> lastExecutedSql = new ThreadLocal<>();
+
+    // 用于跟踪最后的查询结果
+    private static final ThreadLocal<QueryResult> lastQueryResult = new ThreadLocal<>();
 
     /**
      * 调用 schema.get 工具
@@ -101,6 +106,10 @@ public class McpToolService {
                     .block();
 
             log.info("sql.run 成功响应: {}", response);
+
+            // 保存结构化结果到 ThreadLocal
+            saveQueryResult(response);
+
             return formatSqlResponse(response);
         } catch (WebClientResponseException e) {
             log.error("=== sql.run HTTP 错误 ===");
@@ -115,10 +124,41 @@ public class McpToolService {
     }
 
     /**
+     * 保存查询结果到 ThreadLocal
+     */
+    @SuppressWarnings("unchecked")
+    private void saveQueryResult(Map<String, Object> response) {
+        if (response == null) {
+            return;
+        }
+
+        try {
+            List<String> columns = (List<String>) response.get("columns");
+            List<List<Object>> rows = (List<List<Object>>) response.get("rows");
+            Integer rowCount = (Integer) response.get("rowCount");
+
+            if (columns != null && rows != null && rowCount != null) {
+                QueryResult queryResult = new QueryResult(columns, rows, rowCount);
+                lastQueryResult.set(queryResult);
+                log.info("已保存查询结果: {} 行, {} 列", rowCount, columns.size());
+            }
+        } catch (Exception e) {
+            log.warn("保存查询结果失败: {}", e.getMessage());
+        }
+    }
+
+    /**
      * 获取最后执行的 SQL
      */
     public static String getLastExecutedSql() {
         return lastExecutedSql.get();
+    }
+
+    /**
+     * 获取最后的查询结果
+     */
+    public static QueryResult getLastQueryResult() {
+        return lastQueryResult.get();
     }
 
     /**
