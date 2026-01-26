@@ -12,6 +12,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/mcp")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*") // 允许跨域访问，支持前端(8082)直接调用MCP Server(8083)
 public class McpController {
 
     private final DatabaseService databaseService;
