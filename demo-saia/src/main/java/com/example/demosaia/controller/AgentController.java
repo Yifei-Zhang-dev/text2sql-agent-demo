@@ -1,7 +1,7 @@
 package com.example.demosaia.controller;
 
+import com.example.demosaia.dto.ScriptResponse;
 import com.example.demosaia.dto.Text2SqlRequest;
-import com.example.demosaia.dto.Text2SqlResponse;
 import com.example.demosaia.service.Text2SqlService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,11 +24,11 @@ public class AgentController {
     private final Text2SqlService text2SqlService;
 
     /**
-     * POST /agent/text2sql - 自然语言转 SQL 并执行
+     * POST /agent/text2sql - 自然语言转 SQL 并生成 JavaScript 脚本
      */
-    @Operation(summary = "自然语言转 SQL", description = "输入自然语言问题，自动生成 SQL 并执行，返回查询结果和解释")
+    @Operation(summary = "自然语言转 SQL", description = "输入自然语言问题，自动生成 JavaScript 脚本，返回脚本代码和解释")
     @PostMapping("/text2sql")
-    public Text2SqlResponse text2Sql(@RequestBody Text2SqlRequest request) {
+    public ScriptResponse text2Sql(@RequestBody Text2SqlRequest request) {
         return text2SqlService.executeText2Sql(request);
     }
 
