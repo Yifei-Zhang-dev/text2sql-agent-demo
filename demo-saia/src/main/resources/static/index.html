@@ -3,330 +3,516 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spring AI Alibaba Demo - Text2SQL</title>
+    <title>Text-to-SQL Agent (Spring AI Alibaba)</title>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
+        /* ========== 基础样式重置 ========== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            min-height: 100vh;
         }
+
+        /* ========== 主容器 ========== */
         .container {
-            max-width: 900px;
-            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        .content {
-            padding: 30px;
-        }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        .input-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #333;
-        }
-        .input-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-            resize: vertical;
-            transition: border-color 0.3s;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .input-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
+
+        h1 {
+            color: #1890ff;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 24px;
         }
-        .button-group {
+
+        /* ========== 输入区域 ========== */
+        .input-area {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
-        button {
+
+        #question-input {
             flex: 1;
-            padding: 12px 24px;
+            padding: 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        #question-input:focus {
+            outline: none;
+            border-color: #1890ff;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+
+        button {
+            padding: 12px 30px;
+            background: #1890ff;
+            color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: 4px;
             cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
             transition: all 0.3s;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+
+        button:hover {
+            background: #40a9ff;
         }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        .btn-primary:disabled {
-            opacity: 0.6;
+
+        button:disabled {
+            background: #d9d9d9;
             cursor: not-allowed;
-            transform: none;
         }
-        .btn-secondary {
-            background: #f5f5f5;
-            color: #666;
-        }
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-        .result-section {
-            display: none;
-            margin-top: 20px;
-        }
-        .result-section.show {
-            display: block;
-        }
-        .result-card {
-            background: #f9f9f9;
-            border-left: 4px solid #667eea;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-        .result-card.error {
-            border-left-color: #f44336;
-            background: #ffebee;
-        }
-        .result-card h3 {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .result-card .content {
-            padding: 0;
-            background: white;
-            border-radius: 4px;
-            padding: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            color: #333;
-        }
-        .result-card.error .content {
-            color: #d32f2f;
-        }
-        .result-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-            background: white;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .result-table th {
-            background: #667eea;
-            color: white;
-            padding: 10px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-        .result-table td {
-            padding: 10px;
-            border-bottom: 1px solid #e0e0e0;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            color: #333;
-        }
-        .result-table tr:last-child td {
-            border-bottom: none;
-        }
-        .result-table tr:hover {
-            background: #f5f5f5;
-        }
-        .table-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 8px;
-            font-style: italic;
-        }
-        .no-data {
-            padding: 20px;
-            text-align: center;
-            color: #999;
-            font-style: italic;
-        }
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
-            margin-right: 8px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .footer {
-            padding: 20px 30px;
-            background: #f5f5f5;
-            border-top: 1px solid #e0e0e0;
-            text-align: center;
-            font-size: 13px;
-            color: #666;
-        }
-        .footer a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
+
+        /* ========== 示例标签 ========== */
         .examples {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
-            margin-top: 8px;
+            margin-bottom: 20px;
         }
+
         .example-tag {
-            background: #e8eaf6;
-            color: #5c6bc0;
+            background: #e6f7ff;
+            color: #1890ff;
             padding: 6px 12px;
             border-radius: 16px;
             font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
+            border: 1px solid #91d5ff;
         }
+
         .example-tag:hover {
-            background: #667eea;
+            background: #1890ff;
             color: white;
+        }
+
+        /* ========== 结果容器 ========== */
+        .result-container {
+            min-height: 200px;
+            border: 1px dashed #d9d9d9;
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        /* ========== 加载状态 ========== */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+            font-size: 16px;
+        }
+
+        .loading::before {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #1890ff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ========== 错误提示 ========== */
+        .error {
+            padding: 20px;
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            border-radius: 4px;
+            color: #cf1322;
+        }
+
+        .error h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .error p {
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+
+        /* ========== 组件容器 ========== */
+        .component-container {
+            margin-bottom: 20px;
+        }
+
+        /* ========== 数据表格 ========== */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .data-table th {
+            background: #fafafa;
+            padding: 12px;
+            border: 1px solid #e8e8e8;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border: 1px solid #e8e8e8;
+            text-align: left;
+            color: #666;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .data-table tr:hover {
+            background: #e6f7ff;
+        }
+
+        .table-footer {
+            text-align: center;
+            padding: 10px;
+            background: #fafafa;
+            border-radius: 4px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* ========== 数据点组件 ========== */
+        .datapoint {
+            text-align: center;
+            padding: 60px;
+            background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+            border-radius: 8px;
+        }
+
+        .datapoint-value {
+            font-size: 72px;
+            font-weight: bold;
+            color: #1890ff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .datapoint-label {
+            font-size: 16px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        /* ========== 解释说明 ========== */
+        .explanation {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            border-radius: 4px;
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        /* ========== 脚本代码展示（调试用） ========== */
+        .script-debug {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+        }
+
+        .script-debug summary {
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .script-debug pre {
+            margin-top: 10px;
+            padding: 10px;
+            background: #282c34;
+            color: #abb2bf;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        /* ========== 页脚 ========== */
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e8e8e8;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .footer a {
+            color: #1890ff;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Spring AI Alibaba Demo - Text2SQL</h1>
-            <p>使用自然语言查询数据库，支持客户、订单和订单明细表</p>
+        <h1>Text-to-SQL Agent (Spring AI Alibaba)</h1>
+
+        <!-- 示例问题 -->
+        <div class="examples">
+            <span class="example-tag" onclick="setExample('列出所有客户的姓名')">列出所有客户的姓名</span>
+            <span class="example-tag" onclick="setExample('统计每个客户的订单总数')">统计订单总数</span>
+            <span class="example-tag" onclick="setExample('查询总金额最高的订单')">最高金额订单</span>
+            <span class="example-tag" onclick="setExample('统计各订单状态的数量分布')">订单状态分布</span>
+            <span class="example-tag" onclick="setExample('客户总数是多少')">客户总数</span>
         </div>
 
-        <div class="content">
-            <div class="input-group">
-                <label for="question">输入您的问题：</label>
-                <textarea id="question" rows="3" placeholder="例如：查询所有客户的姓名和邮箱"></textarea>
-                <div class="examples">
-                    <div class="example-tag" onclick="setExample('查询所有客户的姓名和邮箱')">示例 1</div>
-                    <div class="example-tag" onclick="setExample('统计每个客户的订单总数')">示例 2</div>
-                    <div class="example-tag" onclick="setExample('查询总金额最高的订单')">示例 3</div>
-                    <div class="example-tag" onclick="setExample('列出所有待发货的订单')">示例 4</div>
-                </div>
-            </div>
+        <!-- 输入区域 -->
+        <div class="input-area">
+            <textarea id="question-input" placeholder="输入问题，例如：列出所有客户的姓名"></textarea>
+            <button id="query-btn" onclick="handleQuery()">查询</button>
+        </div>
 
-            <div class="button-group">
-                <button class="btn-primary" onclick="submitQuery()" id="submitBtn">
-                    <span id="btnText">提交查询</span>
-                </button>
-                <button class="btn-secondary" onclick="clearResults()">清空结果</button>
-            </div>
-
-            <div id="resultSection" class="result-section">
-                <div id="errorCard" class="result-card error" style="display: none;">
-                    <h3>错误信息</h3>
-                    <div class="content" id="errorContent"></div>
-                </div>
-
-                <div id="sqlCard" class="result-card" style="display: none;">
-                    <h3>生成的 SQL</h3>
-                    <div class="content" id="sqlContent"></div>
-                </div>
-
-                <div id="resultCard" class="result-card" style="display: none;">
-                    <h3>查询结果</h3>
-                    <div id="resultContent"></div>
-                </div>
-
-                <div id="explanationCard" class="result-card" style="display: none;">
-                    <h3>结果解释</h3>
-                    <div class="content" id="explanationContent"></div>
-                </div>
+        <!-- 结果容器 -->
+        <div id="result-container" class="result-container">
+            <div style="text-align: center; color: #999; padding: 60px;">
+                请输入问题开始查询
             </div>
         </div>
 
+        <!-- 页脚 -->
         <div class="footer">
-            <p>API 文档：<a href="/swagger-ui.html" target="_blank">Swagger UI</a> | 健康检查：<a href="/actuator/health" target="_blank">/actuator/health</a></p>
+            <p>API 文档：<a href="/swagger-ui.html" target="_blank">Swagger UI</a> |
+               健康检查：<a href="/actuator/health" target="_blank">/actuator/health</a></p>
         </div>
     </div>
 
     <script>
-        function setExample(text) {
-            document.getElementById('question').value = text;
+        // ============================================================
+        // MCP Client 包装器
+        // 用于前端直接调用 MCP Server (8083端口) 的工具
+        // ============================================================
+        const mcpClient = {
+            /**
+             * 获取表结构信息
+             * @param {string} tableName - 表名
+             * @returns {Promise<Object>} 表结构信息
+             */
+            async getSchema(tableName) {
+                console.log('[mcpClient] 调用 getSchema:', tableName);
+                try {
+                    const response = await fetch('http://localhost:8083/mcp/tools/schema.get', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ table: tableName })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('[mcpClient] getSchema 结果:', data);
+                    return data;
+                } catch (error) {
+                    console.error('[mcpClient] getSchema 失败:', error);
+                    throw error;
+                }
+            },
+
+            /**
+             * 执行 SQL 查询
+             * @param {string} sql - SQL 语句
+             * @returns {Promise<Array>} 查询结果（转换为对象数组格式）
+             *
+             * MCP Server 返回格式: { columns: [...], rows: [[...], [...]], rowCount: n }
+             * 转换后格式: [{ col1: val1, col2: val2 }, { col1: val3, col2: val4 }]
+             */
+            async executeSql(sql) {
+                console.log('[mcpClient] 执行 SQL:', sql);
+                try {
+                    const response = await fetch('http://localhost:8083/mcp/tools/sql.run', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sql: sql })
+                    });
+
+                    if (!response.ok) {
+                        // 尝试获取错误详情
+                        let errorDetail = response.statusText;
+                        try {
+                            const errorBody = await response.text();
+                            if (errorBody) {
+                                errorDetail = errorBody;
+                            }
+                        } catch (e) {
+                            // 忽略解析错误
+                        }
+                        console.error('[mcpClient] SQL 执行失败:', response.status, errorDetail);
+                        throw new Error(`SQL执行失败 (HTTP ${response.status}): ${errorDetail}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('[mcpClient] SQL 原始结果:', data);
+
+                    // 检查是否有错误信息
+                    if (data.error) {
+                        throw new Error(`SQL错误: ${data.error}`);
+                    }
+
+                    // 将 { columns, rows } 格式转换为对象数组格式
+                    // 这样 LLM 生成的脚本可以直接使用 result.map() 等数组方法
+                    const result = this._convertToObjectArray(data);
+                    console.log('[mcpClient] SQL 转换后结果:', result);
+                    return result;
+                } catch (error) {
+                    console.error('[mcpClient] executeSql 失败:', error);
+                    throw error;
+                }
+            },
+
+            /**
+             * 将 MCP Server 返回的列式数据转换为增强的数组对象
+             * @param {Object} data - MCP Server 返回的数据 { columns, rows, rowCount }
+             * @returns {Array} 增强的数组对象，同时支持:
+             *   - 数组操作: result.map(), result[0], result.length
+             *   - 属性访问: result.rows, result.columns, result.rowCount
+             *
+             * 这样可以兼容 LLM 生成的两种写法:
+             *   - result.map(row => ...)      // 直接当数组用
+             *   - result.rows.map(row => ...) // 通过 .rows 访问
+             */
+            _convertToObjectArray(data) {
+                if (!data || !data.columns || !data.rows) {
+                    console.warn('[mcpClient] 数据格式不完整:', data);
+                    // 返回空数组，但也添加 rows 属性
+                    const emptyResult = [];
+                    emptyResult.rows = [];
+                    emptyResult.columns = [];
+                    emptyResult.rowCount = 0;
+                    return emptyResult;
+                }
+
+                const { columns, rows, rowCount } = data;
+
+                // 转换每一行为对象
+                const objectRows = rows.map(row => {
+                    const obj = {};
+                    columns.forEach((col, index) => {
+                        // 同时保留原始列名和小写列名，兼容不同的 LLM 脚本写法
+                        obj[col] = row[index];                    // 原始列名 (如 NAME, ID)
+                        obj[col.toLowerCase()] = row[index];      // 小写列名 (如 name, id)
+                        obj[col.toUpperCase()] = row[index];      // 大写列名 (如 NAME, ID)
+                    });
+                    return obj;
+                });
+
+                // 创建增强数组：既是数组，又有 rows/columns/rowCount 属性
+                // 这样 result.map() 和 result.rows.map() 都能工作
+                const enhancedResult = [...objectRows];
+                enhancedResult.rows = objectRows;           // 兼容 result.rows[0].xxx
+                enhancedResult.columns = columns;           // 列名信息
+                enhancedResult.rowCount = rowCount || rows.length;  // 行数
+
+                return enhancedResult;
+            }
+        };
+
+        // ============================================================
+        // 脚本执行引擎
+        // 执行 LLM 生成的 JavaScript 脚本
+        // ============================================================
+
+        /**
+         * 执行 LLM 生成的脚本代码
+         * @param {string} scriptCode - JavaScript 脚本代码
+         * @returns {Promise<Object>} 执行结果 { componentType, propertyData }
+         */
+        async function executeScript(scriptCode) {
+            console.log('[执行脚本] 开始执行...');
+            console.log('[脚本代码]', scriptCode);
+
+            try {
+                // 创建异步函数并执行
+                // 将 mcpClient 作为参数传入，脚本中可以直接使用
+                const func = new Function('mcpClient', `
+                    return (async function() {
+                        ${scriptCode}
+                        return await generateData(mcpClient);
+                    })();
+                `);
+
+                const result = await func(mcpClient);
+                console.log('[执行脚本] 成功，结果:', result);
+                return result;
+            } catch (error) {
+                console.error('[执行脚本] 失败:', error);
+                throw new Error(`脚本执行失败: ${error.message}`);
+            }
         }
 
-        function clearResults() {
-            document.getElementById('question').value = '';
-            document.getElementById('resultSection').classList.remove('show');
-            document.getElementById('errorCard').style.display = 'none';
-            document.getElementById('sqlCard').style.display = 'none';
-            document.getElementById('resultCard').style.display = 'none';
-            document.getElementById('explanationCard').style.display = 'none';
-        }
+        // ============================================================
+        // 查询流程
+        // ============================================================
 
-        async function submitQuery() {
-            const question = document.getElementById('question').value.trim();
-            if (!question) {
+        /**
+         * 处理用户查询
+         * 1. 调用后端 Agent 获取脚本
+         * 2. 执行脚本获取数据
+         * 3. 渲染组件显示结果
+         */
+        async function handleQuery() {
+            const question = document.getElementById('question-input').value;
+            if (!question.trim()) {
                 alert('请输入问题');
                 return;
             }
 
-            const submitBtn = document.getElementById('submitBtn');
-            const btnText = document.getElementById('btnText');
-            submitBtn.disabled = true;
-            btnText.innerHTML = '<span class="spinner"></span>处理中...';
+            const resultContainer = document.getElementById('result-container');
+            const queryBtn = document.getElementById('query-btn');
 
-            // Hide all result cards
-            document.getElementById('errorCard').style.display = 'none';
-            document.getElementById('sqlCard').style.display = 'none';
-            document.getElementById('resultCard').style.display = 'none';
-            document.getElementById('explanationCard').style.display = 'none';
-            document.getElementById('resultSection').classList.add('show');
+            // 显示加载状态
+            resultContainer.innerHTML = '<div class="loading">正在查询...</div>';
+            queryBtn.disabled = true;
+            queryBtn.textContent = '查询中...';
 
             try {
-                const response = await fetch('/agent/text2sql', {
+                // 1. 调用后端 Agent，获取 LLM 生成的脚本
+                console.log('[查询] 发送请求:', question);
+                const response = await fetch('http://localhost:8082/agent/text2sql', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question: question })
                 });
 
@@ -335,84 +521,328 @@
                 }
 
                 const data = await response.json();
+                console.log('[查询] 后端返回:', data);
 
-                // Display SQL
-                if (data.sql) {
-                    document.getElementById('sqlContent').textContent = data.sql;
-                    document.getElementById('sqlCard').style.display = 'block';
+                // 检查是否有脚本代码
+                if (!data.scriptCode) {
+                    throw new Error('后端未返回脚本代码');
                 }
 
-                // Display Result (structured table)
-                if (data.result && data.result.columns && data.result.rows) {
-                    const resultContent = document.getElementById('resultContent');
-                    const result = data.result;
+                // 2. 执行 LLM 生成的脚本
+                const { componentType, propertyData } = await executeScript(data.scriptCode);
 
-                    if (result.rowCount === 0) {
-                        resultContent.innerHTML = '<div class="no-data">无数据</div>';
-                    } else {
-                        const maxRows = 20;
-                        const displayRows = result.rows.slice(0, maxRows);
-
-                        let tableHtml = '<table class="result-table"><thead><tr>';
-                        result.columns.forEach(col => {
-                            tableHtml += `<th>${escapeHtml(col)}</th>`;
-                        });
-                        tableHtml += '</tr></thead><tbody>';
-
-                        displayRows.forEach(row => {
-                            tableHtml += '<tr>';
-                            row.forEach(cell => {
-                                const cellValue = cell !== null && cell !== undefined ? escapeHtml(String(cell)) : '<i>null</i>';
-                                tableHtml += `<td>${cellValue}</td>`;
-                            });
-                            tableHtml += '</tr>';
-                        });
-
-                        tableHtml += '</tbody></table>';
-
-                        const infoText = result.rowCount > maxRows
-                            ? `共 ${result.rowCount} 行，已展示前 ${displayRows.length} 行`
-                            : `共 ${result.rowCount} 行`;
-                        tableHtml += `<div class="table-info">${infoText}</div>`;
-
-                        resultContent.innerHTML = tableHtml;
-                    }
-                    document.getElementById('resultCard').style.display = 'block';
-                }
-
-                // Display Explanation
-                if (data.explanation) {
-                    document.getElementById('explanationContent').textContent = data.explanation;
-                    document.getElementById('explanationCard').style.display = 'block';
-                }
-
-                // Display Error
-                if (data.error) {
-                    document.getElementById('errorContent').textContent = data.error;
-                    document.getElementById('errorCard').style.display = 'block';
-                }
+                // 3. 渲染组件
+                renderComponent(componentType, propertyData, data.explanation, data.scriptCode);
 
             } catch (error) {
-                document.getElementById('errorContent').textContent = '请求失败: ' + error.message;
-                document.getElementById('errorCard').style.display = 'block';
+                console.error('[查询] 失败:', error);
+                resultContainer.innerHTML = `
+                    <div class="error">
+                        <h3>❌ 查询失败</h3>
+                        <p>${escapeHtml(error.message)}</p>
+                    </div>
+                `;
             } finally {
-                submitBtn.disabled = false;
-                btnText.textContent = '提交查询';
+                // 恢复按钮状态
+                queryBtn.disabled = false;
+                queryBtn.textContent = '查询';
             }
         }
 
+        // ============================================================
+        // 动态渲染组件
+        // ============================================================
+
+        /**
+         * 根据组件类型渲染不同的 UI 组件
+         * @param {string} componentType - 组件类型: Table, PieChart, DataPoint
+         * @param {Object} propertyData - 组件数据
+         * @param {string} explanation - LLM 的解释说明
+         * @param {string} scriptCode - 原始脚本代码（调试用）
+         */
+        function renderComponent(componentType, propertyData, explanation, scriptCode) {
+            const container = document.getElementById('result-container');
+            container.innerHTML = '';
+
+            console.log('[渲染] 组件类型:', componentType);
+            console.log('[渲染] 数据:', propertyData);
+
+            // 创建组件容器
+            const componentDiv = document.createElement('div');
+            componentDiv.className = 'component-container';
+
+            // 根据类型渲染不同组件
+            switch(componentType) {
+                case 'Table':
+                    renderTable(componentDiv, propertyData);
+                    break;
+                case 'PieChart':
+                    renderPieChart(componentDiv, propertyData);
+                    break;
+                case 'DataPoint':
+                    renderDataPoint(componentDiv, propertyData);
+                    break;
+                default:
+                    componentDiv.innerHTML = `
+                        <div class="error">
+                            <h3>⚠️ 不支持的组件类型</h3>
+                            <p>组件类型 "${escapeHtml(componentType)}" 暂不支持</p>
+                        </div>
+                    `;
+            }
+
+            container.appendChild(componentDiv);
+
+            // 显示解释说明
+            if (explanation) {
+                const explanationDiv = document.createElement('div');
+                explanationDiv.className = 'explanation';
+                explanationDiv.innerHTML = `<strong>💡 说明：</strong>${escapeHtml(explanation)}`;
+                container.appendChild(explanationDiv);
+            }
+
+            // 显示脚本代码（可折叠，调试用）
+            if (scriptCode) {
+                const debugDiv = document.createElement('div');
+                debugDiv.className = 'script-debug';
+                debugDiv.innerHTML = `
+                    <details>
+                        <summary>查看生成的脚本代码</summary>
+                        <pre>${escapeHtml(scriptCode)}</pre>
+                    </details>
+                `;
+                container.appendChild(debugDiv);
+            }
+        }
+
+        /**
+         * 渲染表格组件
+         * @param {HTMLElement} container - 容器元素
+         * @param {Object} data - 表格数据 { columns?, rows, total? }
+         */
+        function renderTable(container, data) {
+            console.log('[renderTable] 数据:', data);
+
+            // 处理空数据
+            if (!data || !data.rows || data.rows.length === 0) {
+                container.innerHTML = '<div class="error">暂无数据</div>';
+                return;
+            }
+
+            // 获取列名（从数据的第一行推断，或使用 columns 字段）
+            // 过滤掉 key 和重复的大小写列名
+            let columns = data.columns;
+            if (!columns) {
+                const allKeys = Object.keys(data.rows[0]);
+                // 去重：只保留原始列名（优先小写，其次保留第一个出现的）
+                const seen = new Set();
+                columns = allKeys.filter(k => {
+                    if (k === 'key') return false;
+                    const lower = k.toLowerCase();
+                    if (seen.has(lower)) return false;
+                    seen.add(lower);
+                    return true;
+                });
+            }
+
+            let html = '<table class="data-table">';
+
+            // 表头
+            html += '<thead><tr>';
+            columns.forEach(col => {
+                html += `<th>${escapeHtml(String(col))}</th>`;
+            });
+            html += '</tr></thead>';
+
+            // 表体
+            html += '<tbody>';
+            data.rows.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    // 尝试多种方式获取值（兼容大小写）
+                    let value = row[col];
+                    if (value === null || value === undefined) {
+                        value = row[col.toLowerCase()];
+                    }
+                    if (value === null || value === undefined) {
+                        value = row[col.toUpperCase()];
+                    }
+                    html += `<td>${value !== null && value !== undefined ? escapeHtml(String(value)) : '-'}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            // 表格底部信息
+            const total = data.total !== undefined ? data.total : data.rows.length;
+            html += `<div class="table-footer">共 ${total} 条记录</div>`;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 渲染饼图组件
+         * @param {HTMLElement} container - 容器元素
+         * @param {Array} data - 饼图数据 [{ name, value }, ...]
+         */
+        function renderPieChart(container, data) {
+            console.log('[renderPieChart] 数据:', data);
+
+            // 检查数据是否有效
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                container.innerHTML = '<div class="error">饼图数据为空</div>';
+                return;
+            }
+
+            // 创建图表容器，增加高度
+            const chartDiv = document.createElement('div');
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '500px';
+            chartDiv.style.minHeight = '400px';
+            container.appendChild(chartDiv);
+
+            // 延迟初始化，确保 DOM 已渲染
+            setTimeout(() => {
+                // 初始化 ECharts
+                const chart = echarts.init(chartDiv);
+
+                // 配置饼图 - 使用更大的尺寸和更好的布局
+                const option = {
+                    title: {
+                        text: '数据分布',
+                        left: 'center',
+                        top: 20,
+                        textStyle: {
+                            color: '#333',
+                            fontSize: 18,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c} ({d}%)',
+                        backgroundColor: 'rgba(50, 50, 50, 0.9)',
+                        textStyle: { color: '#fff' }
+                    },
+                    legend: {
+                        orient: 'horizontal',
+                        bottom: 20,
+                        left: 'center',
+                        itemGap: 20
+                    },
+                    color: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4'],
+                    series: [{
+                        type: 'pie',
+                        radius: ['35%', '65%'],
+                        center: ['50%', '45%'],
+                        avoidLabelOverlap: true,
+                        itemStyle: {
+                            borderRadius: 8,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            formatter: '{b}\n{d}%',
+                            fontSize: 12,
+                            lineHeight: 18
+                        },
+                        labelLine: {
+                            show: true,
+                            length: 15,
+                            length2: 10
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 14,
+                                fontWeight: 'bold'
+                            },
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.3)'
+                            }
+                        },
+                        data: data
+                    }]
+                };
+
+                chart.setOption(option);
+
+                // 响应窗口大小变化
+                const resizeHandler = () => chart.resize();
+                window.addEventListener('resize', resizeHandler);
+
+                // 在容器被移除时清理
+                const observer = new MutationObserver((mutations) => {
+                    if (!document.contains(chartDiv)) {
+                        window.removeEventListener('resize', resizeHandler);
+                        chart.dispose();
+                        observer.disconnect();
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            }, 100);
+        }
+
+        /**
+         * 渲染数据点组件（单个数值展示）
+         * @param {HTMLElement} container - 容器元素
+         * @param {Object} data - 数据 { value, label? }
+         */
+        function renderDataPoint(container, data) {
+            console.log('[renderDataPoint] 数据:', data);
+
+            const value = data.value !== undefined ? data.value : data;
+            const label = data.label || '';
+
+            container.innerHTML = `
+                <div class="datapoint">
+                    <div class="datapoint-value">${escapeHtml(String(value))}</div>
+                    ${label ? `<div class="datapoint-label">${escapeHtml(label)}</div>` : ''}
+                </div>
+            `;
+        }
+
+        // ============================================================
+        // 工具函数
+        // ============================================================
+
+        /**
+         * HTML 转义，防止 XSS
+         * @param {string} text - 原始文本
+         * @returns {string} 转义后的文本
+         */
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Support Enter key to submit (Ctrl+Enter)
-        document.getElementById('question').addEventListener('keydown', function(e) {
+        /**
+         * 设置示例问题
+         * @param {string} text - 示例文本
+         */
+        function setExample(text) {
+            document.getElementById('question-input').value = text;
+        }
+
+        // ============================================================
+        // 键盘快捷键
+        // ============================================================
+
+        // 支持 Ctrl+Enter 提交查询
+        document.getElementById('question-input').addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
-                submitQuery();
+                handleQuery();
             }
         });
+
+        // 页面加载完成后的日志
+        console.log('[初始化] Text-to-SQL Agent 前端已加载');
+        console.log('[初始化] mcpClient 已就绪');
+        console.log('[初始化] ECharts 版本:', echarts.version);
     </script>
 </body>
 </html>

@@ -65,10 +65,11 @@ public class Text2SqlService {
             约束规则：
             - 代码必须放在```javascript代码块中
             - 必须使用async/await语法
-            - Table的rows中必须有key字段
+            - Table的rows中必须有key字段（在JavaScript代码中手动添加，不要在SQL中使用AS key）
             - 字段名要与SQL查询的列名对应
             - 先调用schemaGet再生成SQL
             - SQL只支持SELECT语句
+            - SQL中禁止使用保留字作为别名（如key、order、table等），直接查询原始列名即可
 
             步骤4: 用1-2句话简短解释查询结果
 
