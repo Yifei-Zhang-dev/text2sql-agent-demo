@@ -108,6 +108,31 @@ public class Text2SqlService {
             }
             ```
 
+            按年月统计查询（如"2024年每月订单量"）：
+            ```javascript
+            async function generateData(mcpClient) {
+                // 使用 YEAR() 和 MONTH() 函数（H2数据库语法）
+                const sql = "SELECT YEAR(ORDER_DATE) as ORDER_YEAR, MONTH(ORDER_DATE) as ORDER_MONTH, COUNT(*) as ORDER_COUNT FROM orders WHERE YEAR(ORDER_DATE) = 2024 GROUP BY YEAR(ORDER_DATE), MONTH(ORDER_DATE) ORDER BY ORDER_MONTH";
+                const result = await mcpClient.executeSql(sql);
+
+                const rows = result.rows.map((row, index) => ({
+                    key: index + 1,
+                    year: row.ORDER_YEAR || row.order_year,
+                    month: row.ORDER_MONTH || row.order_month,
+                    orderCount: row.ORDER_COUNT || row.order_count
+                }));
+
+                return {
+                    componentType: 'Table',
+                    propertyData: {
+                        rows: rows,
+                        queryType: 'aggregation',
+                        pageInfo: { currentPage: 1, hasMore: false }
+                    }
+                };
+            }
+            ```
+
             聚合查询下一页（当问题包含 page=数字 时）：
             ```javascript
             async function generateData(mcpClient) {
@@ -179,6 +204,12 @@ public class Text2SqlService {
             - ⭐ 识别分页请求：
               * 列表查询：问题包含 "cursor=数字" 时，提取作为游标
               * 聚合查询：问题包含 "page=数字" 时，提取页码计算 OFFSET
+            - ⭐ H2数据库日期函数（重要！必须使用这些函数）：
+              * 提取年份：YEAR(date_column)，不要用 EXTRACT(YEAR FROM ...)
+              * 提取月份：MONTH(date_column)，不要用 EXTRACT(MONTH FROM ...)
+              * 提取日期：DAY(date_column)
+              * 格式化日期：FORMATDATETIME(date_column, 'yyyy-MM')
+              * 示例：SELECT YEAR(ORDER_DATE) as ORDER_YEAR, MONTH(ORDER_DATE) as ORDER_MONTH FROM orders
 
             步骤4: 用1-2句话简短解释查询结果
             - 列表查询："展示前20条客户记录。点击'下一页'查看更多。"
