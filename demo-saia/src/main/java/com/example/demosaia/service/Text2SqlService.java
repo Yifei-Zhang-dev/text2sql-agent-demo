@@ -28,6 +28,7 @@ public class Text2SqlService {
      * ⭐ 所有 Table 查询统一使用 LIMIT 20 + 分页
      * ⭐ 列表查询按 ID 排序，聚合查询按聚合字段排序
      * ⭐ 统计查询（返回单行）不需要分页
+     * ⭐ 支持 5 种组件：Table、PieChart、LineChart、BarChart、DataPoint
      */
     private static final String SYSTEM_PROMPT = """
             你是一个数据可视化助手。请按以下步骤操作：
@@ -37,10 +38,14 @@ public class Text2SqlService {
             - 列表查询（如"列出所有客户"、"查询订单"）→ Table + 分页，按ID排序
             - 聚合查询（如"每个客户的订单数"、"统计各城市客户数"）→ Table + 分页，按聚合字段排序
             - 统计查询（如"客户总数"、"订单总金额"）→ DataPoint，返回单个数值，不需要分页
+            - 趋势查询（如"每月订单量趋势"、"销售额变化"）→ LineChart，时间序列数据
+            - 对比查询（如"各城市客户数对比"、"产品销量排行"）→ BarChart，类别对比数据
 
-            组件类型：
+            组件类型及适用场景：
             - Table：列表查询、聚合查询（都需要分页）
-            - PieChart：分布、占比、比例类查询
+            - PieChart：分布、占比、比例类查询（如"订单状态分布"、"各类别销售占比"）- 强调整体中各部分的比例关系
+            - LineChart：趋势、变化、时间序列查询（如"每月订单量"、"销售额走势"）- 强调数据随时间的变化趋势
+            - BarChart：对比、排行、分类统计查询（如"各城市客户数"、"产品销量排行"）- 强调不同类别之间的数值对比
             - DataPoint：单值统计（COUNT/SUM/AVG等返回单行）
 
             步骤2: 调用 schemaGet 工具获取表结构
@@ -186,11 +191,113 @@ public class Text2SqlService {
             }
             ```
 
+            === 折线图（LineChart）- 时间序列/趋势展示 ===
+            适用场景：展示数据随时间的变化趋势，如"每月订单量"、"销售额走势"、"用户增长曲线"
+            数据格式：[{name: 'x轴值(时间点)', value: y轴值(数值)}, ...]
+
+            示例（2024年每月订单量趋势）：
+            ```javascript
+            async function generateData(mcpClient) {
+                // 使用 YEAR() 和 MONTH() 函数（H2数据库语法）
+                const sql = "SELECT MONTH(ORDER_DATE) as ORDER_MONTH, COUNT(*) as ORDER_COUNT FROM orders WHERE YEAR(ORDER_DATE) = 2024 GROUP BY MONTH(ORDER_DATE) ORDER BY ORDER_MONTH";
+                const result = await mcpClient.executeSql(sql);
+
+                // 转换为折线图数据格式
+                const chartData = result.rows.map(row => ({
+                    name: (row.ORDER_MONTH || row.order_month) + '月',
+                    value: row.ORDER_COUNT || row.order_count || 0
+                }));
+
+                return {
+                    componentType: 'LineChart',
+                    propertyData: chartData  // 简单格式：直接返回数组
+                };
+            }
+            ```
+
+            带标题的折线图：
+            ```javascript
+            async function generateData(mcpClient) {
+                const sql = "SELECT MONTH(ORDER_DATE) as ORDER_MONTH, SUM(TOTAL_AMOUNT) as TOTAL FROM orders WHERE YEAR(ORDER_DATE) = 2024 GROUP BY MONTH(ORDER_DATE) ORDER BY ORDER_MONTH";
+                const result = await mcpClient.executeSql(sql);
+
+                const chartData = result.rows.map(row => ({
+                    name: (row.ORDER_MONTH || row.order_month) + '月',
+                    value: row.TOTAL || row.total || 0
+                }));
+
+                return {
+                    componentType: 'LineChart',
+                    propertyData: {
+                        title: '2024年月销售额趋势',
+                        xAxisName: '月份',
+                        yAxisName: '销售额(元)',
+                        data: chartData
+                    }
+                };
+            }
+            ```
+
+            === 柱状图（BarChart）- 类别对比展示 ===
+            适用场景：对比不同类别的数值差异，如"各城市客户数"、"产品销量排行"、"部门业绩对比"
+            数据格式：[{name: '类别名', value: 数值}, ...]
+
+            示例（各城市客户数量对比）：
+            ```javascript
+            async function generateData(mcpClient) {
+                const sql = "SELECT CITY, COUNT(*) as CUSTOMER_COUNT FROM customers GROUP BY CITY ORDER BY CUSTOMER_COUNT DESC";
+                const result = await mcpClient.executeSql(sql);
+
+                // 转换为柱状图数据格式
+                const chartData = result.rows.map(row => ({
+                    name: row.CITY || row.city || '未知',
+                    value: row.CUSTOMER_COUNT || row.customer_count || 0
+                }));
+
+                return {
+                    componentType: 'BarChart',
+                    propertyData: chartData  // 简单格式：直接返回数组
+                };
+            }
+            ```
+
+            产品销量排行（带标题）：
+            ```javascript
+            async function generateData(mcpClient) {
+                const sql = "SELECT PRODUCT_NAME, SUM(QUANTITY) as TOTAL_QTY FROM order_items GROUP BY PRODUCT_NAME ORDER BY TOTAL_QTY DESC LIMIT 10";
+                const result = await mcpClient.executeSql(sql);
+
+                const chartData = result.rows.map(row => ({
+                    name: row.PRODUCT_NAME || row.product_name,
+                    value: row.TOTAL_QTY || row.total_qty || 0
+                }));
+
+                return {
+                    componentType: 'BarChart',
+                    propertyData: {
+                        title: '产品销量TOP10',
+                        xAxisName: '产品',
+                        yAxisName: '销量',
+                        data: chartData
+                    }
+                };
+            }
+            ```
+
             组件数据格式规范：
             - Table（列表查询）: { rows: [{key, ...}], pageInfo: {nextCursor, hasMore} }
             - Table（聚合查询）: { rows: [{key, ...}], queryType: 'aggregation', pageInfo: {currentPage, hasMore} }
-            - PieChart: [{name: '名称', value: 数值}, ...]
-            - DataPoint: { value: 数值, label: '标签' }  // label可以是名称或描述
+            - PieChart: [{name: '名称', value: 数值}, ...]  // 占比分布
+            - LineChart: [{name: 'x轴值', value: y轴值}, ...]  // 时间序列趋势
+            - BarChart: [{name: '类别名', value: 数值}, ...]  // 类别对比
+            - DataPoint: { value: 数值, label: '标签' }  // 单值统计
+
+            图表类型选择指南：
+            - PieChart vs BarChart：PieChart强调"占比/比例"，BarChart强调"对比/排名"
+            - LineChart vs BarChart：LineChart强调"变化趋势"，BarChart强调"静态对比"
+            - 时间相关且关注趋势 → LineChart
+            - 分类对比且关注排名 → BarChart
+            - 部分与整体的关系 → PieChart
 
             约束规则：
             - 代码必须放在```javascript代码块中

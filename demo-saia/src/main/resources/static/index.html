@@ -333,9 +333,10 @@
 
         <!-- 示例问题 -->
         <div class="examples">
-            <span class="example-tag" onclick="setExample('列出所有客户的姓名')">列出所有客户的姓名</span>
-            <span class="example-tag" onclick="setExample('统计每个客户的订单总数')">统计订单总数</span>
-            <span class="example-tag" onclick="setExample('查询总金额最高的订单')">最高金额订单</span>
+            <span class="example-tag" onclick="setExample('列出所有客户的姓名')">列出所有客户</span>
+            <span class="example-tag" onclick="setExample('2024年每月订单量趋势')">月订单趋势</span>
+            <span class="example-tag" onclick="setExample('各城市客户数量对比')">城市客户对比</span>
+            <span class="example-tag" onclick="setExample('各产品销售量排行')">产品销量排行</span>
             <span class="example-tag" onclick="setExample('统计各订单状态的数量分布')">订单状态分布</span>
             <span class="example-tag" onclick="setExample('客户总数是多少')">客户总数</span>
         </div>
@@ -774,6 +775,12 @@
                 case 'PieChart':
                     renderPieChart(componentDiv, propertyData);
                     break;
+                case 'LineChart':
+                    renderLineChart(componentDiv, propertyData);
+                    break;
+                case 'BarChart':
+                    renderBarChart(componentDiv, propertyData);
+                    break;
                 case 'DataPoint':
                     renderDataPoint(componentDiv, propertyData);
                     break;
@@ -1015,6 +1022,281 @@
                             }
                         },
                         data: data
+                    }]
+                };
+
+                chart.setOption(option);
+
+                // 响应窗口大小变化
+                const resizeHandler = () => chart.resize();
+                window.addEventListener('resize', resizeHandler);
+
+                // 在容器被移除时清理
+                const observer = new MutationObserver((mutations) => {
+                    if (!document.contains(chartDiv)) {
+                        window.removeEventListener('resize', resizeHandler);
+                        chart.dispose();
+                        observer.disconnect();
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            }, 100);
+        }
+
+        /**
+         * 渲染折线图组件（时间序列/趋势展示）
+         * @param {HTMLElement} container - 容器元素
+         * @param {Object|Array} data - 折线图数据
+         *   - 简单格式: [{ name: 'x轴值', value: y轴值 }, ...]
+         *   - 完整格式: { title: '标题', xAxisName: 'X轴名', yAxisName: 'Y轴名', data: [...] }
+         */
+        function renderLineChart(container, data) {
+            console.log('[renderLineChart] 数据:', data);
+
+            // 兼容两种数据格式
+            let chartData, title, xAxisName, yAxisName;
+            if (Array.isArray(data)) {
+                chartData = data;
+                title = '趋势图';
+                xAxisName = '';
+                yAxisName = '';
+            } else {
+                chartData = data.data || [];
+                title = data.title || '趋势图';
+                xAxisName = data.xAxisName || '';
+                yAxisName = data.yAxisName || '';
+            }
+
+            // 检查数据是否有效
+            if (!chartData || chartData.length === 0) {
+                container.innerHTML = '<div class="error">折线图数据为空</div>';
+                return;
+            }
+
+            // 创建图表容器
+            const chartDiv = document.createElement('div');
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '450px';
+            chartDiv.style.minHeight = '350px';
+            container.appendChild(chartDiv);
+
+            // 延迟初始化，确保 DOM 已渲染
+            setTimeout(() => {
+                const chart = echarts.init(chartDiv);
+
+                // 提取 x 轴和 y 轴数据
+                const xData = chartData.map(item => item.name);
+                const yData = chartData.map(item => item.value);
+
+                const option = {
+                    title: {
+                        text: title,
+                        left: 'center',
+                        top: 15,
+                        textStyle: {
+                            color: '#333',
+                            fontSize: 18,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        backgroundColor: 'rgba(50, 50, 50, 0.9)',
+                        textStyle: { color: '#fff' },
+                        axisPointer: {
+                            type: 'cross',
+                            label: { backgroundColor: '#6a7985' }
+                        }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '10%',
+                        top: '18%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        name: xAxisName,
+                        boundaryGap: false,
+                        data: xData,
+                        axisLine: { lineStyle: { color: '#999' } },
+                        axisLabel: { color: '#666', rotate: xData.length > 10 ? 45 : 0 }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: yAxisName,
+                        axisLine: { lineStyle: { color: '#999' } },
+                        axisLabel: { color: '#666' },
+                        splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } }
+                    },
+                    series: [{
+                        type: 'line',
+                        data: yData,
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        lineStyle: {
+                            width: 3,
+                            color: '#1890ff'
+                        },
+                        itemStyle: {
+                            color: '#1890ff',
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                                { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }
+                            ])
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowColor: 'rgba(24, 144, 255, 0.5)'
+                            }
+                        }
+                    }]
+                };
+
+                chart.setOption(option);
+
+                // 响应窗口大小变化
+                const resizeHandler = () => chart.resize();
+                window.addEventListener('resize', resizeHandler);
+
+                // 在容器被移除时清理
+                const observer = new MutationObserver((mutations) => {
+                    if (!document.contains(chartDiv)) {
+                        window.removeEventListener('resize', resizeHandler);
+                        chart.dispose();
+                        observer.disconnect();
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            }, 100);
+        }
+
+        /**
+         * 渲染柱状图组件（类别对比展示）
+         * @param {HTMLElement} container - 容器元素
+         * @param {Object|Array} data - 柱状图数据
+         *   - 简单格式: [{ name: '类别名', value: 数值 }, ...]
+         *   - 完整格式: { title: '标题', xAxisName: 'X轴名', yAxisName: 'Y轴名', data: [...], horizontal: false }
+         */
+        function renderBarChart(container, data) {
+            console.log('[renderBarChart] 数据:', data);
+
+            // 兼容两种数据格式
+            let chartData, title, xAxisName, yAxisName, horizontal;
+            if (Array.isArray(data)) {
+                chartData = data;
+                title = '对比图';
+                xAxisName = '';
+                yAxisName = '';
+                horizontal = false;
+            } else {
+                chartData = data.data || [];
+                title = data.title || '对比图';
+                xAxisName = data.xAxisName || '';
+                yAxisName = data.yAxisName || '';
+                horizontal = data.horizontal || false;
+            }
+
+            // 检查数据是否有效
+            if (!chartData || chartData.length === 0) {
+                container.innerHTML = '<div class="error">柱状图数据为空</div>';
+                return;
+            }
+
+            // 创建图表容器
+            const chartDiv = document.createElement('div');
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '450px';
+            chartDiv.style.minHeight = '350px';
+            container.appendChild(chartDiv);
+
+            // 延迟初始化，确保 DOM 已渲染
+            setTimeout(() => {
+                const chart = echarts.init(chartDiv);
+
+                // 提取类别名和数值
+                const categories = chartData.map(item => item.name);
+                const values = chartData.map(item => item.value);
+
+                // 根据是否水平显示决定轴配置
+                const categoryAxis = {
+                    type: 'category',
+                    name: horizontal ? yAxisName : xAxisName,
+                    data: categories,
+                    axisLine: { lineStyle: { color: '#999' } },
+                    axisLabel: {
+                        color: '#666',
+                        rotate: !horizontal && categories.length > 8 ? 45 : 0,
+                        interval: 0
+                    }
+                };
+
+                const valueAxis = {
+                    type: 'value',
+                    name: horizontal ? xAxisName : yAxisName,
+                    axisLine: { lineStyle: { color: '#999' } },
+                    axisLabel: { color: '#666' },
+                    splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } }
+                };
+
+                const option = {
+                    title: {
+                        text: title,
+                        left: 'center',
+                        top: 15,
+                        textStyle: {
+                            color: '#333',
+                            fontSize: 18,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        backgroundColor: 'rgba(50, 50, 50, 0.9)',
+                        textStyle: { color: '#fff' },
+                        axisPointer: { type: 'shadow' }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: horizontal ? '5%' : '15%',
+                        top: '18%',
+                        containLabel: true
+                    },
+                    xAxis: horizontal ? valueAxis : categoryAxis,
+                    yAxis: horizontal ? categoryAxis : valueAxis,
+                    series: [{
+                        type: 'bar',
+                        data: values,
+                        barWidth: '50%',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#1890ff' },
+                                { offset: 1, color: '#69c0ff' }
+                            ]),
+                            borderRadius: [4, 4, 0, 0]
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#40a9ff' },
+                                    { offset: 1, color: '#91d5ff' }
+                                ])
+                            }
+                        },
+                        label: {
+                            show: chartData.length <= 15,
+                            position: horizontal ? 'right' : 'top',
+                            color: '#666',
+                            fontSize: 11
+                        }
                     }]
                 };
 
