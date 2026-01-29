@@ -12,6 +12,7 @@ CREATE TABLE customers (
     name VARCHAR(100) NOT NULL COMMENT '客户姓名',
     email VARCHAR(255) NOT NULL UNIQUE COMMENT '电子邮箱',
     phone VARCHAR(20) COMMENT '联系电话',
+    city VARCHAR(50) COMMENT '所在城市',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
 );
 
