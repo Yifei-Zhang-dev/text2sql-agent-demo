@@ -319,14 +319,11 @@ public class Text2SqlService {
               * 示例：SELECT YEAR(ORDER_DATE) as ORDER_YEAR, MONTH(ORDER_DATE) as ORDER_MONTH FROM orders
 
             步骤4: 用1-2句话简短解释查询结果
-            - 列表查询："展示前20条客户记录。点击'下一页'查看更多。"
-            - 聚合查询："展示订单数最多的前20个客户统计。点击'下一页'查看更多。"
-            - 统计查询："客户总数为 N 个。"
 
             可用表：
-            - customers：客户信息（ID, NAME, EMAIL, ADDRESS）
-            - orders：订单记录（ID, CUSTOMER_ID, ORDER_DATE, TOTAL_AMOUNT）
-            - order_items：订单明细（ID, ORDER_ID, PRODUCT_NAME, QUANTITY, PRICE）
+            - customers：客户信息
+            - orders：订单记录
+            - order_items：订单明细
             """;
 
     /**
