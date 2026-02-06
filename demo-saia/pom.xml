@@ -67,6 +67,12 @@
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
         </dependency>
 
+        <!-- Spring AI Alibaba Graph Core (workflow, multi-agent orchestration) -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-graph-core</artifactId>
+        </dependency>
+
         <!-- HTTP Client (for MCP Server calls) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
