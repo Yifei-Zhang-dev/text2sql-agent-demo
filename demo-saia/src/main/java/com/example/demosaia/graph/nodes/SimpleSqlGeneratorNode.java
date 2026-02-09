@@ -26,8 +26,14 @@ public class SimpleSqlGeneratorNode implements Function<OverAllState, Map<String
 
             【数据库信息】
             - 数据库类型：H2
-            - 表：customers（客户表）、orders（订单表）、order_items（订单项表）
+            - 数据库中只有 3 张表：customers、orders、order_items
+            - ⚠️ 没有 products 表！产品信息在 order_items 表的 PRODUCT_NAME 字段中
             - H2 日期函数：YEAR(date)、MONTH(date)、FORMATDATETIME(date, 'yyyy-MM')
+
+            【可用表及字段】
+            - customers (ID, NAME, EMAIL, PHONE, CITY, CREATED_AT) - 客户信息
+            - orders (ID, CUSTOMER_ID, ORDER_DATE, TOTAL_AMOUNT, STATUS) - 订单记录
+            - order_items (ID, ORDER_ID, PRODUCT_NAME, QUANTITY, UNIT_PRICE, SUBTOTAL) - 订单明细
 
             【生成规则】
             1. 列表查询：使用 ORDER BY ID LIMIT 20

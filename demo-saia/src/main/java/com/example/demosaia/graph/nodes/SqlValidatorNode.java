@@ -41,7 +41,19 @@ public class SqlValidatorNode implements Function<OverAllState, Map<String, Obje
         try {
             // 简单验证：尝试执行 LIMIT 1 测试
             String testSql = addLimitIfNeeded(sql);
-            mcpToolService.runSql(testSql);
+            String result = mcpToolService.runSql(testSql);
+
+            // mcpToolService.runSql() 内部捕获了异常并返回错误字符串，需要检查返回值
+            if (result != null && (result.startsWith("SQL 执行失败") || result.contains("错误"))) {
+                log.warn("[SqlValidatorNode] SQL 验证失败（执行返回错误）: {}", result);
+                state.addLog("[SqlValidatorNode] 验证失败: " + result);
+
+                state.setValidatedSql(sql);
+                state.setIsValid(false);
+                state.setValidationError(result);
+
+                return state.toMap();
+            }
 
             state.setValidatedSql(sql);
             state.setIsValid(true);
