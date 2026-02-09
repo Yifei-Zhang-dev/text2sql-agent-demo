@@ -331,6 +331,20 @@
     <div class="container">
         <h1>Text-to-SQL Agent (Spring AI Alibaba)</h1>
 
+        <!-- ⭐ 模式指示器 -->
+        <div id="mode-indicator" style="text-align: center; margin-bottom: 20px;">
+            <span id="mode-badge" style="
+                display: inline-block;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: 500;
+            "></span>
+            <a href="?mode=single" style="margin-left: 10px; color: #1890ff; text-decoration: none;">切换到单Agent</a>
+            <span style="color: #999; margin: 0 5px;">|</span>
+            <a href="?mode=graph" style="color: #1890ff; text-decoration: none;">切换到Graph</a>
+        </div>
+
         <!-- 示例问题 -->
         <div class="examples">
             <span class="example-tag" onclick="setExample('列出所有客户的姓名')">列出所有客户</span>
@@ -362,6 +376,35 @@
     </div>
 
     <script>
+        // ============================================================
+        // ⭐ 模式检测（通过 URL 参数）
+        // ============================================================
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode') || 'single'; // 默认单 Agent 模式
+
+        // API 端点
+        const API_ENDPOINT = mode === 'graph'
+            ? 'http://localhost:8082/agent/text2sql-graph'
+            : 'http://localhost:8082/agent/text2sql';
+
+        // 更新页面显示
+        const modeBadge = document.getElementById('mode-badge');
+        if (mode === 'graph') {
+            modeBadge.textContent = '🔄 Graph 多Agent模式';
+            modeBadge.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            modeBadge.style.color = 'white';
+            document.title = 'Text-to-SQL Agent (Graph 版本)';
+        } else {
+            modeBadge.textContent = '⚡ 单Agent模式';
+            modeBadge.style.background = '#e6f7ff';
+            modeBadge.style.color = '#1890ff';
+            modeBadge.style.border = '1px solid #91d5ff';
+            document.title = 'Text-to-SQL Agent (单Agent 版本)';
+        }
+
+        console.log('[初始化] 当前模式:', mode);
+        console.log('[初始化] API 端点:', API_ENDPOINT);
+
         // ============================================================
         // ⭐ 分页状态管理
         // ============================================================
@@ -672,7 +715,7 @@
             try {
                 // 1. 调用后端 Agent，获取 LLM 生成的脚本
                 console.log('[查询] 发送请求:', question);
-                const response = await fetch('http://localhost:8082/agent/text2sql', {
+                const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question: question })

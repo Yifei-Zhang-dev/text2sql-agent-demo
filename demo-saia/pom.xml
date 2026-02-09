@@ -86,6 +86,12 @@
             <version>2.7.0</version>
         </dependency>
 
+        <!-- Gson (required by spring-ai-alibaba-graph-core at runtime) -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+
         <!-- Lombok (optional) -->
         <dependency>
             <groupId>org.projectlombok</groupId>

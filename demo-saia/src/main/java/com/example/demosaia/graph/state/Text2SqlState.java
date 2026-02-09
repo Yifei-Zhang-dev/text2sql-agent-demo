@@ -3,6 +3,7 @@ package com.example.demosaia.graph.state;
 import lombok.Data;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -125,9 +126,16 @@ public class Text2SqlState {
         state.setExplanation((String) map.get("explanation"));
         state.setComponentType((String) map.get("componentType"));
 
-        String log = (String) map.get("executionLog");
-        if (log != null) {
-            state.executionLog = new StringBuilder(log);
+        // executionLog 可能是 String（首次）或 List<String>（经 AppendStrategy 合并后）
+        Object logObj = map.get("executionLog");
+        if (logObj instanceof String) {
+            state.executionLog = new StringBuilder((String) logObj);
+        } else if (logObj instanceof List) {
+            StringBuilder sb = new StringBuilder();
+            for (Object item : (List<?>) logObj) {
+                sb.append(item);
+            }
+            state.executionLog = sb;
         }
         return state;
     }
