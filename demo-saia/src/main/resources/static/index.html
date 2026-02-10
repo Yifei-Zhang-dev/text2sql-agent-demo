@@ -296,7 +296,7 @@
             font-size: 14px;
         }
 
-        /* ========== 脚本代码展示（调试用） ========== */
+        /* ========== 技术详情展示（调试用） ========== */
         .script-debug {
             margin-top: 20px;
             padding: 15px;
@@ -320,6 +320,34 @@
             overflow-x: auto;
             font-size: 12px;
             line-height: 1.5;
+        }
+
+        .debug-section-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 14px;
+            margin-bottom: 4px;
+        }
+
+        .debug-section-label:first-child {
+            margin-top: 0;
+        }
+
+        .debug-sql-block {
+            margin-top: 6px;
+            padding: 10px;
+            background: #1e1e2e;
+            color: #89b4fa;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
 
         /* ========== 页脚 ========== */
@@ -957,7 +985,7 @@
                 }
 
                 // 4. 渲染组件（传入 executionLog 和 errorInfo）
-                renderComponent(componentType, propertyData, data.explanation, data.scriptCode, data.executionLog, data.errorInfo);
+                renderComponent(componentType, propertyData, data);
 
             } catch (error) {
                 console.error('[查询] 失败:', error);
@@ -988,12 +1016,9 @@
          * 根据组件类型渲染不同的 UI 组件
          * @param {string} componentType - 组件类型: Table, PieChart, DataPoint
          * @param {Object} propertyData - 组件数据
-         * @param {string} explanation - LLM 的解释说明
-         * @param {string} scriptCode - 原始脚本代码（调试用）
-         * @param {string} executionLog - Graph 执行日志（仅 Graph 模式）
-         * @param {Object} errorInfo - 错误信息（可选）
+         * @param {Object} backendData - 后端返回的完整响应（含 explanation, scriptCode, executionLog, sql, queryType 等）
          */
-        function renderComponent(componentType, propertyData, explanation, scriptCode, executionLog, errorInfo) {
+        function renderComponent(componentType, propertyData, backendData) {
             const container = document.getElementById('result-container');
             container.innerHTML = '';
 
@@ -1033,31 +1058,21 @@
             container.appendChild(componentDiv);
 
             // 显示解释说明
-            if (explanation) {
+            if (backendData.explanation) {
                 const explanationDiv = document.createElement('div');
                 explanationDiv.className = 'explanation';
-                explanationDiv.innerHTML = `<strong>💡 说明：</strong>${escapeHtml(explanation)}`;
+                explanationDiv.innerHTML = `<strong>💡 说明：</strong>${escapeHtml(backendData.explanation)}`;
                 container.appendChild(explanationDiv);
             }
 
             // Graph 模式：显示执行日志（可折叠）
-            if (mode === 'graph' && executionLog) {
-                const logDiv = renderExecutionLog(executionLog);
+            if (mode === 'graph' && backendData.executionLog) {
+                const logDiv = renderExecutionLog(backendData.executionLog);
                 container.appendChild(logDiv);
             }
 
-            // 显示脚本代码（可折叠，调试用）
-            if (scriptCode) {
-                const debugDiv = document.createElement('div');
-                debugDiv.className = 'script-debug';
-                debugDiv.innerHTML = `
-                    <details>
-                        <summary>查看生成的脚本代码</summary>
-                        <pre>${escapeHtml(scriptCode)}</pre>
-                    </details>
-                `;
-                container.appendChild(debugDiv);
-            }
+            // 技术详情面板（可折叠）
+            renderTechDetails(container, backendData);
         }
 
         /**
@@ -1800,6 +1815,53 @@
                 btn.textContent = '已复制';
                 setTimeout(() => { btn.textContent = orig; }, 1500);
             });
+        }
+
+        /**
+         * 渲染技术详情面板（SQL + 脚本代码）
+         * @param {HTMLElement} container - 父容器
+         * @param {Object} backendData - 后端返回的完整响应
+         */
+        function renderTechDetails(container, backendData) {
+            const sql = backendData.sql;
+            const scriptCode = backendData.scriptCode;
+            const queryType = backendData.queryType;
+
+            if (!sql && !scriptCode) return;
+
+            const debugDiv = document.createElement('div');
+            debugDiv.className = 'script-debug';
+
+            let contentHtml = '';
+
+            // Graph 模式显示查询路径标签
+            if (mode === 'graph' && queryType) {
+                const pathLabel = queryType === 'simple' ? 'Simple 路径（单表查询）' : 'Complex 路径（多表/聚合）';
+                contentHtml += `<div class="debug-section-label" style="margin-bottom: 8px;">📍 ${pathLabel}</div>`;
+            }
+
+            // SQL 语句
+            if (sql) {
+                contentHtml += `<div class="debug-section-label">SQL 语句</div>`;
+                contentHtml += `<div class="debug-sql-block">${escapeHtml(sql)}</div>`;
+            }
+
+            // 脚本代码
+            if (scriptCode) {
+                contentHtml += `<div class="debug-section-label" style="margin-top: 14px;">可视化脚本</div>`;
+                contentHtml += `<pre>${escapeHtml(scriptCode)}</pre>`;
+            }
+
+            debugDiv.innerHTML = `
+                <details>
+                    <summary>🔧 技术详情</summary>
+                    <div style="margin-top: 10px;">
+                        ${contentHtml}
+                    </div>
+                </details>
+            `;
+
+            container.appendChild(debugDiv);
         }
 
         /**

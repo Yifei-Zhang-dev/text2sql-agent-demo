@@ -33,6 +33,16 @@ public class ScriptResponse {
     private String explanation;
 
     /**
+     * 生成的 SQL 语句（用于技术详情展示）
+     */
+    private String sql;
+
+    /**
+     * 查询类型: simple / complex（仅 Graph 模式）
+     */
+    private String queryType;
+
+    /**
      * Graph 执行日志（仅 Graph 模式返回）
      * 记录各节点的执行过程，用于前端展示可观测性信息
      */

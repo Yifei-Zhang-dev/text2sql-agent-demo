@@ -82,6 +82,8 @@ public class AgentController {
             ScriptResponse.ScriptResponseBuilder builder = ScriptResponse.builder()
                     .scriptCode(resultState.getScriptCode())
                     .explanation(resultState.getExplanation())
+                    .sql(resultState.getValidatedSql() != null ? resultState.getValidatedSql() : resultState.getSql())
+                    .queryType(resultState.getQueryType())
                     .executionLog(resultState.getExecutionLog().toString());
 
             // 如果有错误信息，附加到响应
