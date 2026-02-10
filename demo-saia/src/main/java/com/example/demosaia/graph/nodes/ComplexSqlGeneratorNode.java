@@ -40,7 +40,7 @@ public class ComplexSqlGeneratorNode implements Function<OverAllState, Map<Strin
 
             【生成规则】
             1. 支持 JOIN、GROUP BY、HAVING
-            2. 聚合查询使用 LIMIT 20
+            2. 聚合查询使用 LIMIT 200
             3. 按聚合字段排序（如 ORDER BY COUNT DESC）
             4. 只生成 SQL，不要解释
             5. 不要使用 ``` 代码块包裹
@@ -48,15 +48,13 @@ public class ComplexSqlGeneratorNode implements Function<OverAllState, Map<Strin
 
             【示例】
             问题：每个客户的订单数
-            SQL：SELECT c.ID, c.NAME, COUNT(o.ID) as ORDER_COUNT FROM customers c LEFT JOIN orders o ON c.ID = o.CUSTOMER_ID GROUP BY c.ID, c.NAME ORDER BY ORDER_COUNT DESC LIMIT 20
+            SQL：SELECT c.ID, c.NAME, COUNT(o.ID) as ORDER_COUNT FROM customers c LEFT JOIN orders o ON c.ID = o.CUSTOMER_ID GROUP BY c.ID, c.NAME ORDER BY ORDER_COUNT DESC LIMIT 200
 
             问题：各产品销售量排行
-            SQL：SELECT PRODUCT_NAME, SUM(QUANTITY) as TOTAL_QTY FROM order_items GROUP BY PRODUCT_NAME ORDER BY TOTAL_QTY DESC LIMIT 20
+            SQL：SELECT PRODUCT_NAME, SUM(QUANTITY) as TOTAL_QTY FROM order_items GROUP BY PRODUCT_NAME ORDER BY TOTAL_QTY DESC LIMIT 200
 
             【用户问题】
             {question}
-
-            {paginationHint}
             """;
 
     @Override
@@ -76,18 +74,8 @@ public class ComplexSqlGeneratorNode implements Function<OverAllState, Map<Strin
                 schemaStr = schema != null ? schema.toString() : "无表结构信息";
             }
 
-            // 处理分页参数
-            String paginationHint = "";
-            if (state.getPaginationParam() != null && state.getPaginationParam().startsWith("page=")) {
-                String page = state.getPaginationParam().substring(5);
-                int pageNum = Integer.parseInt(page);
-                int offset = (pageNum - 1) * 20;
-                paginationHint = "注意：这是第 " + page + " 页，使用 LIMIT 20 OFFSET " + offset;
-            }
-
             // 构建最终 prompt
             String finalSchemaStr = schemaStr;
-            String finalPaginationHint = paginationHint;
 
             // 生成 SQL
             String sql = chatClient.prompt()
@@ -95,7 +83,6 @@ public class ComplexSqlGeneratorNode implements Function<OverAllState, Map<Strin
                             COMPLEX_SQL_PROMPT
                                     .replace("{schema}", finalSchemaStr)
                                     .replace("{question}", state.getQuestion())
-                                    .replace("{paginationHint}", finalPaginationHint)
                     ))
                     .call()
                     .content()

@@ -36,22 +36,20 @@ public class SimpleSqlGeneratorNode implements Function<OverAllState, Map<String
             - order_items (ID, ORDER_ID, PRODUCT_NAME, QUANTITY, UNIT_PRICE, SUBTOTAL) - 订单明细
 
             【生成规则】
-            1. 列表查询：使用 ORDER BY ID LIMIT 20
+            1. 列表查询：使用 ORDER BY ID LIMIT 200
             2. 统计查询：使用 COUNT(*)/SUM()/AVG() 等聚合函数
             3. 只生成 SQL，不要解释
             4. 不要使用 ``` 代码块包裹
 
             【示例】
             问题：列出所有客户
-            SQL：SELECT * FROM customers ORDER BY ID LIMIT 20
+            SQL：SELECT * FROM customers ORDER BY ID LIMIT 200
 
             问题：订单总金额是多少
             SQL：SELECT SUM(TOTAL_AMOUNT) as TOTAL FROM orders
 
             【用户问题】
             {question}
-
-            {paginationHint}
             """;
 
     @Override
@@ -62,24 +60,11 @@ public class SimpleSqlGeneratorNode implements Function<OverAllState, Map<String
         state.addLog("[SimpleSqlGeneratorNode] 开始生成 SQL");
 
         try {
-            // 处理分页参数
-            String paginationHint = "";
-            if (state.getPaginationParam() != null && !state.getPaginationParam().isEmpty()) {
-                if (state.getPaginationParam().startsWith("cursor=")) {
-                    String cursor = state.getPaginationParam().substring(7);
-                    paginationHint = "注意：这是翻页请求，使用 WHERE ID > " + cursor + " 进行分页";
-                }
-            }
-
-            // 构建最终 prompt
-            String finalPaginationHint = paginationHint;
-
             // 生成 SQL
             String sql = chatClient.prompt()
                     .user(userSpec -> userSpec.text(
                             SIMPLE_SQL_PROMPT
                                     .replace("{question}", state.getQuestion())
-                                    .replace("{paginationHint}", finalPaginationHint)
                     ))
                     .call()
                     .content()

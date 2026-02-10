@@ -24,7 +24,7 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
     private final ChatClient chatClient;
 
     private static final String RENDERER_PROMPT = """
-            你是数据可视化专家。根据用户问题和已生成的 SQL，生成 JavaScript 脚本。
+            你是数据可视化专家。根据用户问题和已生成的 SQL，先生成中文说明，再生成 JavaScript 脚本。
 
             【已生成的 SQL】
             {sql}
@@ -33,7 +33,8 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
             {question}
 
             【任务】
-            根据上面的 SQL 和问题，生成一个 async function generateData(mcpClient) 函数。
+            1. 首先，用中文写一段详细说明（3-5句话），包括：查询目的、数据来源（哪些表）、展示方式（什么组件）、数据量限制（最多200条）。说明写在代码块之前。
+            2. 然后，生成一个 async function generateData(mcpClient) 函数。
             函数必须调用 mcpClient.executeSql(sql) 执行 SQL，然后返回 { componentType, propertyData }。
 
             【mcpClient.executeSql 返回值说明】
@@ -50,12 +51,10 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
                 const sql = "已有的SQL";
                 const result = await mcpClient.executeSql(sql);
                 const rows = result.rows.map((row, index) => ({ key: index + 1, ...row }));
-                const lastId = rows.length > 0 ? rows[rows.length - 1].ID || rows[rows.length - 1].id : null;
                 return {
                     componentType: 'Table',
                     propertyData: {
-                        rows: rows,
-                        pageInfo: { nextCursor: lastId, hasMore: rows.length === 20 }
+                        rows: rows
                     }
                 };
             }
@@ -70,9 +69,7 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
                 return {
                     componentType: 'Table',
                     propertyData: {
-                        rows: rows,
-                        queryType: 'aggregation',
-                        pageInfo: { currentPage: 1, hasMore: rows.length === 20 }
+                        rows: rows
                     }
                 };
             }
@@ -141,7 +138,7 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
 
             【组件选择指南】
             - 列表查询（列出所有客户、显示订单等）→ Table
-            - 聚合查询（每个客户的订单数等）→ Table（带 queryType: 'aggregation'）
+            - 聚合查询（每个客户的订单数等）→ Table
             - 单值统计（总数、总金额、平均值等）→ DataPoint
             - 时间趋势（每月、每年的变化）→ LineChart
             - 分类对比/排行（各城市、各产品等）→ BarChart
@@ -178,11 +175,14 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
                     .call()
                     .content();
 
+            // 提取说明文本
+            String explanation = extractExplanation(llmResponse);
+
             // 提取 JavaScript 代码
             String scriptCode = extractScriptCode(llmResponse);
 
             state.setScriptCode(scriptCode);
-            state.setExplanation("基于 Graph 编排生成的可视化脚本");
+            state.setExplanation(explanation);
             state.addLog("[RendererNode] 脚本生成完成");
 
             log.info("[RendererNode] 脚本生成完成");
@@ -198,6 +198,30 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
 
             return state.toMap();
         }
+    }
+
+    /**
+     * 从 LLM 响应中提取说明文本（```javascript 之前的部分）
+     */
+    private String extractExplanation(String llmResponse) {
+        if (llmResponse == null || llmResponse.isEmpty()) {
+            return "基于 Graph 编排生成的可视化脚本（LIMIT 200）";
+        }
+
+        int codeBlockIndex = llmResponse.indexOf("```javascript");
+        if (codeBlockIndex == -1) {
+            codeBlockIndex = llmResponse.indexOf("```");
+        }
+
+        if (codeBlockIndex > 0) {
+            String explanation = llmResponse.substring(0, codeBlockIndex).trim();
+            if (!explanation.isEmpty()) {
+                log.info("[RendererNode] 提取到说明，长度: {}", explanation.length());
+                return explanation;
+            }
+        }
+
+        return "基于 Graph 编排生成的可视化脚本（LIMIT 200）";
     }
 
     /**
