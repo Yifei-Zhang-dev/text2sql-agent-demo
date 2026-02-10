@@ -79,11 +79,24 @@ public class AgentController {
             log.debug("[Graph] 执行日志:\n{}", resultState.getExecutionLog());
 
             // 5. 构建响应
-            return ScriptResponse.builder()
+            ScriptResponse.ScriptResponseBuilder builder = ScriptResponse.builder()
                     .scriptCode(resultState.getScriptCode())
                     .explanation(resultState.getExplanation() +
                                 "\n\n[Graph模式] 查询类型: " + resultState.getQueryType())
-                    .build();
+                    .executionLog(resultState.getExecutionLog().toString());
+
+            // 如果有错误信息，附加到响应
+            if (resultState.getErrorNode() != null) {
+                builder.errorInfo(ScriptResponse.ErrorInfo.builder()
+                        .failedNode(resultState.getErrorNode())
+                        .errorType(resultState.getErrorType())
+                        .errorDetail(resultState.getErrorDetail())
+                        .suggestion(resultState.getErrorSuggestion())
+                        .retryable(Boolean.TRUE.equals(resultState.getErrorRetryable()))
+                        .build());
+            }
+
+            return builder.build();
 
         } catch (Exception e) {
             log.error("[Graph] 执行失败", e);
@@ -91,8 +104,21 @@ public class AgentController {
             return ScriptResponse.builder()
                     .scriptCode(generateErrorScript(e.getMessage()))
                     .explanation("Graph 执行失败: " + e.getMessage())
+                    .errorInfo(ScriptResponse.ErrorInfo.builder()
+                            .failedNode("GraphEngine")
+                            .errorType(classifyTopLevelError(e))
+                            .errorDetail(e.getMessage())
+                            .suggestion("服务暂时不可用，请稍后重试。")
+                            .retryable(true)
+                            .build())
                     .build();
         }
+    }
+
+    private String classifyTopLevelError(Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        if (msg.contains("timeout") || msg.contains("connect")) return "NETWORK_ERROR";
+        return "UNKNOWN";
     }
 
     private String generateErrorScript(String errorMessage) {

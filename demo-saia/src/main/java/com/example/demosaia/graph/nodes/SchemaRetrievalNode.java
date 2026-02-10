@@ -56,6 +56,8 @@ public class SchemaRetrievalNode implements Function<OverAllState, Map<String, O
         } catch (Exception e) {
             log.error("[SchemaRetrievalNode] 获取表结构失败", e);
             state.addLog("[SchemaRetrievalNode] 失败: " + e.getMessage());
+            state.recordError("SchemaRetrievalNode", "NETWORK_ERROR", e.getMessage(),
+                    "获取表结构失败，MCP Server 可能不可用，请稍后重试。", true);
 
             state.setSchema(Map.of());
             return state.toMap();

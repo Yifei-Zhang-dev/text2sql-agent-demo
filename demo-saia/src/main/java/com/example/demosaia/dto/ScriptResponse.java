@@ -31,4 +31,32 @@ public class ScriptResponse {
      * LLM对查询结果的简短说明（1-2句话）
      */
     private String explanation;
+
+    /**
+     * Graph 执行日志（仅 Graph 模式返回）
+     * 记录各节点的执行过程，用于前端展示可观测性信息
+     */
+    private String executionLog;
+
+    /**
+     * 错误信息（仅在执行失败时返回）
+     */
+    private ErrorInfo errorInfo;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ErrorInfo {
+        /** 失败的节点名称 */
+        private String failedNode;
+        /** 错误类型: LLM_ERROR, SQL_SYNTAX, TABLE_NOT_FOUND, FIELD_NOT_FOUND, NETWORK_ERROR, UNKNOWN */
+        private String errorType;
+        /** 错误详情 */
+        private String errorDetail;
+        /** 用户友好的建议 */
+        private String suggestion;
+        /** 是否可重试 */
+        private boolean retryable;
+    }
 }

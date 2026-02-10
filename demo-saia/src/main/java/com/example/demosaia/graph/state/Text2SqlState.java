@@ -74,6 +74,32 @@ public class Text2SqlState {
      */
     private String componentType;
 
+    // === 错误追踪 ===
+    /**
+     * 失败的节点名称（如 "RouterNode"、"SqlValidatorNode"）
+     */
+    private String errorNode;
+
+    /**
+     * 错误类型：LLM_ERROR, SQL_SYNTAX, TABLE_NOT_FOUND, FIELD_NOT_FOUND, NETWORK_ERROR, UNKNOWN
+     */
+    private String errorType;
+
+    /**
+     * 错误详情
+     */
+    private String errorDetail;
+
+    /**
+     * 用户友好建议
+     */
+    private String errorSuggestion;
+
+    /**
+     * 是否可重试
+     */
+    private Boolean errorRetryable;
+
     // === 辅助字段 ===
     /**
      * 执行过程中的日志信息（用于调试）
@@ -86,6 +112,17 @@ public class Text2SqlState {
     public void addLog(String message) {
         executionLog.append("[").append(System.currentTimeMillis()).append("] ")
                 .append(message).append("\n");
+    }
+
+    /**
+     * 记录结构化错误信息
+     */
+    public void recordError(String nodeName, String type, String detail, String suggestion, boolean retryable) {
+        this.errorNode = nodeName;
+        this.errorType = type;
+        this.errorDetail = detail;
+        this.errorSuggestion = suggestion;
+        this.errorRetryable = retryable;
     }
 
     /**
@@ -104,6 +141,11 @@ public class Text2SqlState {
         map.put("scriptCode", scriptCode);
         map.put("explanation", explanation);
         map.put("componentType", componentType);
+        map.put("errorNode", errorNode);
+        map.put("errorType", errorType);
+        map.put("errorDetail", errorDetail);
+        map.put("errorSuggestion", errorSuggestion);
+        map.put("errorRetryable", errorRetryable);
         map.put("executionLog", executionLog.toString());
         return map;
     }
@@ -125,6 +167,11 @@ public class Text2SqlState {
         state.setScriptCode((String) map.get("scriptCode"));
         state.setExplanation((String) map.get("explanation"));
         state.setComponentType((String) map.get("componentType"));
+        state.setErrorNode((String) map.get("errorNode"));
+        state.setErrorType((String) map.get("errorType"));
+        state.setErrorDetail((String) map.get("errorDetail"));
+        state.setErrorSuggestion((String) map.get("errorSuggestion"));
+        state.setErrorRetryable((Boolean) map.get("errorRetryable"));
 
         // executionLog 可能是 String（首次）或 List<String>（经 AppendStrategy 合并后）
         Object logObj = map.get("executionLog");

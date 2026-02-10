@@ -83,10 +83,18 @@ public class SimpleSqlGeneratorNode implements Function<OverAllState, Map<String
         } catch (Exception e) {
             log.error("[SimpleSqlGeneratorNode] SQL 生成失败", e);
             state.addLog("[SimpleSqlGeneratorNode] 失败: " + e.getMessage());
+            state.recordError("SimpleSqlGeneratorNode", classifyError(e), e.getMessage(),
+                    "SQL 生成失败，请尝试重新表述问题或稍后重试。", true);
 
             state.setSql("SELECT 'Error' as MESSAGE");
             return state.toMap();
         }
+    }
+
+    private String classifyError(Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        if (msg.contains("timeout") || msg.contains("connect")) return "NETWORK_ERROR";
+        return "LLM_ERROR";
     }
 
     private String cleanSqlOutput(String sql) {

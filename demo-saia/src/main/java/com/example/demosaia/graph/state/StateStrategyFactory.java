@@ -39,6 +39,13 @@ public class StateStrategyFactory {
             strategies.put("explanation", new ReplaceStrategy());
             strategies.put("componentType", new ReplaceStrategy());
 
+            // 错误追踪：替换策略
+            strategies.put("errorNode", new ReplaceStrategy());
+            strategies.put("errorType", new ReplaceStrategy());
+            strategies.put("errorDetail", new ReplaceStrategy());
+            strategies.put("errorSuggestion", new ReplaceStrategy());
+            strategies.put("errorRetryable", new ReplaceStrategy());
+
             // 日志：追加策略（累积所有节点的日志）
             strategies.put("executionLog", new AppendStrategy());
 

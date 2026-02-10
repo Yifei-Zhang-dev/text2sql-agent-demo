@@ -77,10 +77,18 @@ public class RouterNode implements Function<OverAllState, Map<String, Object>> {
 		catch (Exception e) {
 			log.error("[RouterNode] 分类失败", e);
 			state.addLog("[RouterNode] 分类失败: " + e.getMessage());
+			state.recordError("RouterNode", classifyError(e), e.getMessage(),
+					"路由分类失败，已默认使用复杂查询路径。如问题持续，请稍后重试。", true);
 
 			state.setQueryType("complex");
 			return state.toMap();
 		}
+	}
+
+	private String classifyError(Exception e) {
+		String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+		if (msg.contains("timeout") || msg.contains("connect")) return "NETWORK_ERROR";
+		return "LLM_ERROR";
 	}
 
 }

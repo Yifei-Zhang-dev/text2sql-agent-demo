@@ -340,6 +340,166 @@
         .footer a:hover {
             text-decoration: underline;
         }
+
+        /* ========== 执行日志面板（Graph 模式） ========== */
+        .execution-log {
+            margin-top: 20px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .execution-log summary {
+            cursor: pointer;
+            padding: 12px 15px;
+            background: #fafafa;
+            font-weight: 500;
+            font-size: 14px;
+            color: #333;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .execution-log summary:hover {
+            background: #f0f0f0;
+        }
+
+        .execution-log-content {
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #fafafa;
+            border-top: 1px solid #e8e8e8;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 13px;
+            line-height: 1.5;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-node {
+            flex-shrink: 0;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: monospace;
+            white-space: nowrap;
+        }
+
+        .log-node-router { background: #e6f7ff; color: #1890ff; }
+        .log-node-schema { background: #f6ffed; color: #52c41a; }
+        .log-node-sql { background: #fff7e6; color: #fa8c16; }
+        .log-node-validator { background: #f9f0ff; color: #722ed1; }
+        .log-node-renderer { background: #fff0f6; color: #eb2f96; }
+        .log-node-controller { background: #f5f5f5; color: #666; }
+        .log-node-error { background: #fff2f0; color: #cf1322; }
+
+        .log-message {
+            color: #333;
+            word-break: break-all;
+        }
+
+        .log-message-error {
+            color: #cf1322;
+        }
+
+        .log-message-sql {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .log-copy-btn {
+            padding: 4px 10px;
+            background: #fafafa;
+            border: 1px solid #d9d9d9;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+            float: right;
+            margin-bottom: 10px;
+        }
+
+        .log-copy-btn:hover {
+            background: #e8e8e8;
+        }
+
+        /* ========== 增强错误提示 ========== */
+        .error-enhanced {
+            padding: 20px;
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            border-radius: 4px;
+        }
+
+        .error-enhanced h3 {
+            color: #cf1322;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .error-node-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            background: #fff0f0;
+            border: 1px solid #ffccc7;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #cf1322;
+            margin-bottom: 10px;
+        }
+
+        .error-detail {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #fafafa;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+        .error-suggestion {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+            padding: 10px;
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+
+        .retry-btn {
+            padding: 8px 20px;
+            background: #ff4d4f;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .retry-btn:hover {
+            background: #ff7875;
+        }
     </style>
 </head>
 <body>
@@ -362,12 +522,27 @@
 
         <!-- 示例问题 -->
         <div class="examples">
-            <span class="example-tag" onclick="setExample('列出所有客户的姓名')">列出所有客户</span>
-            <span class="example-tag" onclick="setExample('2024年每月订单量趋势')">月订单趋势</span>
+            <!-- Simple 路径 - 列表查询 → Table -->
+            <span class="example-tag" onclick="setExample('列出所有客户的姓名和城市')">列出所有客户</span>
+            <span class="example-tag" onclick="setExample('查询北京的客户')">北京客户</span>
+            <span class="example-tag" onclick="setExample('查询最近一周的订单')">最近订单</span>
+            <!-- Simple 路径 - 单值统计 → DataPoint -->
+            <span class="example-tag" onclick="setExample('客户总数是多少')">客户总数</span>
+            <span class="example-tag" onclick="setExample('所有订单的总金额是多少')">订单总金额</span>
+            <!-- Complex 路径 - 分组统计 → BarChart -->
             <span class="example-tag" onclick="setExample('各城市客户数量对比')">城市客户对比</span>
             <span class="example-tag" onclick="setExample('各产品销售量排行')">产品销量排行</span>
+            <!-- Complex 路径 - 多表关联 → Table -->
+            <span class="example-tag" onclick="setExample('每个客户的订单数量')">客户订单数</span>
+            <span class="example-tag" onclick="setExample('每个客户的消费总额')">客户消费额</span>
+            <!-- Complex 路径 - 时间趋势 → LineChart -->
+            <span class="example-tag" onclick="setExample('2024年每月订单量趋势')">月订单趋势</span>
+            <span class="example-tag" onclick="setExample('每月销售额变化趋势')">月销售额趋势</span>
+            <!-- Complex 路径 - 占比分布 → PieChart -->
             <span class="example-tag" onclick="setExample('统计各订单状态的数量分布')">订单状态分布</span>
-            <span class="example-tag" onclick="setExample('客户总数是多少')">客户总数</span>
+            <span class="example-tag" onclick="setExample('各城市客户占比分布')">城市客户占比</span>
+            <!-- Complex 路径 - 排行 → BarChart -->
+            <span class="example-tag" onclick="setExample('消费金额最高的前10名客户')">消费TOP10</span>
         </div>
 
         <!-- 输入区域 -->
@@ -724,6 +899,7 @@
             queryBtn.disabled = true;
             queryBtn.textContent = '查询中...';
 
+            let data = null;
             try {
                 // 1. 调用后端 Agent，获取 LLM 生成的脚本
                 console.log('[查询] 发送请求:', question);
@@ -737,7 +913,7 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const data = await response.json();
+                data = await response.json();
                 console.log('[查询] 后端返回:', data);
 
                 // 检查是否有脚本代码
@@ -780,17 +956,23 @@
                     paginationState.queryType = 'list';
                 }
 
-                // 4. 渲染组件
-                renderComponent(componentType, propertyData, data.explanation, data.scriptCode);
+                // 4. 渲染组件（传入 executionLog 和 errorInfo）
+                renderComponent(componentType, propertyData, data.explanation, data.scriptCode, data.executionLog, data.errorInfo);
 
             } catch (error) {
                 console.error('[查询] 失败:', error);
-                resultContainer.innerHTML = `
-                    <div class="error">
-                        <h3>❌ 查询失败</h3>
-                        <p>${escapeHtml(error.message)}</p>
-                    </div>
-                `;
+                // 如果 data 存在且有 errorInfo，显示增强错误提示
+                if (typeof data !== 'undefined' && data && data.errorInfo) {
+                    renderEnhancedError(data.errorInfo, data.executionLog);
+                } else {
+                    resultContainer.innerHTML = `
+                        <div class="error">
+                            <h3>查询失败</h3>
+                            <p>${escapeHtml(error.message)}</p>
+                            <button class="retry-btn" style="margin-top: 12px;" onclick="handleQuery()">重试</button>
+                        </div>
+                    `;
+                }
             } finally {
                 // 恢复按钮状态
                 queryBtn.disabled = false;
@@ -808,8 +990,10 @@
          * @param {Object} propertyData - 组件数据
          * @param {string} explanation - LLM 的解释说明
          * @param {string} scriptCode - 原始脚本代码（调试用）
+         * @param {string} executionLog - Graph 执行日志（仅 Graph 模式）
+         * @param {Object} errorInfo - 错误信息（可选）
          */
-        function renderComponent(componentType, propertyData, explanation, scriptCode) {
+        function renderComponent(componentType, propertyData, explanation, scriptCode, executionLog, errorInfo) {
             const container = document.getElementById('result-container');
             container.innerHTML = '';
 
@@ -854,6 +1038,12 @@
                 explanationDiv.className = 'explanation';
                 explanationDiv.innerHTML = `<strong>💡 说明：</strong>${escapeHtml(explanation)}`;
                 container.appendChild(explanationDiv);
+            }
+
+            // Graph 模式：显示执行日志（可折叠）
+            if (mode === 'graph' && executionLog) {
+                const logDiv = renderExecutionLog(executionLog);
+                container.appendChild(logDiv);
             }
 
             // 显示脚本代码（可折叠，调试用）
@@ -1502,6 +1692,175 @@
                     ${label ? `<div class="datapoint-label">${escapeHtml(label)}</div>` : ''}
                 </div>
             `;
+        }
+
+        // ============================================================
+        // 执行日志和增强错误展示
+        // ============================================================
+
+        /**
+         * 渲染 Graph 执行日志面板
+         * @param {string} logText - 后端返回的执行日志原始文本
+         * @returns {HTMLElement} 日志面板 DOM 元素
+         */
+        function renderExecutionLog(logText) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'execution-log';
+
+            // 解析日志条目（去重：AppendStrategy 会导致每次 merge 累积前面所有日志）
+            const lines = logText.split('\n').filter(line => line.trim());
+            const seen = new Set();
+            const uniqueLines = lines.filter(line => {
+                if (seen.has(line)) return false;
+                seen.add(line);
+                return true;
+            });
+            const entries = uniqueLines.map(line => parseLogEntry(line));
+
+            let entriesHtml = '';
+            entries.forEach(entry => {
+                const nodeClass = getNodeColorClass(entry.node);
+                const messageClass = entry.isError ? 'log-message log-message-error' : 'log-message';
+                const messageContent = entry.isSql
+                    ? `<span class="${messageClass}">${escapeHtml(entry.prefix)} <code class="log-message-sql">${escapeHtml(entry.sqlContent)}</code></span>`
+                    : `<span class="${messageClass}">${escapeHtml(entry.message)}</span>`;
+
+                entriesHtml += `
+                    <div class="log-entry">
+                        <span class="log-node ${nodeClass}">${escapeHtml(entry.node)}</span>
+                        ${messageContent}
+                    </div>
+                `;
+            });
+
+            wrapper.innerHTML = `
+                <details>
+                    <summary>
+                        <span>Graph 执行日志</span>
+                        <span style="font-size: 12px; color: #999; font-weight: normal;">(${entries.length} 步)</span>
+                    </summary>
+                    <div class="execution-log-content">
+                        <button class="log-copy-btn" onclick="copyExecutionLog(this)">复制日志</button>
+                        <div style="clear: both;"></div>
+                        ${entriesHtml}
+                    </div>
+                </details>
+            `;
+
+            // 存储去重后的日志文本用于复制
+            wrapper.dataset.rawLog = uniqueLines.join('\n');
+
+            return wrapper;
+        }
+
+        /**
+         * 解析单条日志
+         */
+        function parseLogEntry(line) {
+            // 格式: [timestamp] [NodeName] message
+            const match = line.match(/^\[(\d+)\]\s*\[(\w+)\]\s*(.*)$/);
+            if (!match) {
+                return { node: 'System', message: line.replace(/^\[\d+\]\s*/, ''), isError: false, isSql: false };
+            }
+
+            const node = match[2];
+            const message = match[3];
+            const isError = message.includes('失败') || message.includes('错误');
+
+            // 检查是否包含 SQL 语句
+            const sqlMatch = message.match(/^(.*SQL:\s*)(.+)$/);
+            if (sqlMatch) {
+                return { node, message, isError, isSql: true, prefix: sqlMatch[1], sqlContent: sqlMatch[2] };
+            }
+
+            return { node, message, isError, isSql: false };
+        }
+
+        /**
+         * 获取节点颜色 CSS 类名
+         */
+        function getNodeColorClass(nodeName) {
+            if (nodeName.includes('Router')) return 'log-node-router';
+            if (nodeName.includes('Schema')) return 'log-node-schema';
+            if (nodeName.includes('Sql') || nodeName.includes('SQL')) return 'log-node-sql';
+            if (nodeName.includes('Validator')) return 'log-node-validator';
+            if (nodeName.includes('Renderer')) return 'log-node-renderer';
+            if (nodeName.includes('Controller')) return 'log-node-controller';
+            return 'log-node-controller';
+        }
+
+        /**
+         * 复制执行日志到剪贴板
+         */
+        function copyExecutionLog(btn) {
+            const wrapper = btn.closest('.execution-log');
+            const rawLog = wrapper.dataset.rawLog;
+            navigator.clipboard.writeText(rawLog).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = '已复制';
+                setTimeout(() => { btn.textContent = orig; }, 1500);
+            });
+        }
+
+        /**
+         * 渲染增强版错误提示
+         * @param {Object} errorInfo - 后端返回的结构化错误信息
+         * @param {string} executionLog - 执行日志（可选）
+         */
+        function renderEnhancedError(errorInfo, executionLog) {
+            const container = document.getElementById('result-container');
+
+            // 映射错误类型到中文
+            const errorTypeMap = {
+                'LLM_ERROR': 'LLM 服务错误',
+                'SQL_SYNTAX': 'SQL 语法错误',
+                'TABLE_NOT_FOUND': '表不存在',
+                'FIELD_NOT_FOUND': '字段不存在',
+                'NETWORK_ERROR': '网络错误',
+                'UNKNOWN': '未知错误'
+            };
+
+            // 映射节点名到中文
+            const nodeNameMap = {
+                'RouterNode': '路由节点',
+                'SimpleSqlGeneratorNode': 'SQL 生成节点（简单）',
+                'ComplexSqlGeneratorNode': 'SQL 生成节点（复杂）',
+                'SchemaRetrievalNode': '表结构获取节点',
+                'SqlValidatorNode': 'SQL 验证节点',
+                'RendererNode': '脚本渲染节点',
+                'GraphEngine': 'Graph 引擎'
+            };
+
+            const nodeLabel = nodeNameMap[errorInfo.failedNode] || errorInfo.failedNode;
+            const typeLabel = errorTypeMap[errorInfo.errorType] || errorInfo.errorType;
+
+            let html = `
+                <div class="error-enhanced">
+                    <h3>查询失败</h3>
+                    <span class="error-node-badge">${escapeHtml(nodeLabel)} - ${escapeHtml(typeLabel)}</span>
+            `;
+
+            if (errorInfo.errorDetail) {
+                html += `<div class="error-detail">${escapeHtml(errorInfo.errorDetail)}</div>`;
+            }
+
+            if (errorInfo.suggestion) {
+                html += `<div class="error-suggestion">${escapeHtml(errorInfo.suggestion)}</div>`;
+            }
+
+            if (errorInfo.retryable) {
+                html += `<button class="retry-btn" onclick="handleQuery()">重试</button>`;
+            }
+
+            html += `</div>`;
+
+            container.innerHTML = html;
+
+            // Graph 模式下，如果有日志，也显示
+            if (mode === 'graph' && executionLog) {
+                const logDiv = renderExecutionLog(executionLog);
+                container.appendChild(logDiv);
+            }
         }
 
         // ============================================================

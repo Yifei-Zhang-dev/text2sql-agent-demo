@@ -51,6 +51,8 @@ public class SqlValidatorNode implements Function<OverAllState, Map<String, Obje
                 state.setValidatedSql(sql);
                 state.setIsValid(false);
                 state.setValidationError(result);
+                state.recordError("SqlValidatorNode", classifySqlError(result), result,
+                        suggestForSqlError(result), false);
 
                 return state.toMap();
             }
@@ -71,9 +73,30 @@ public class SqlValidatorNode implements Function<OverAllState, Map<String, Obje
             state.setValidatedSql(sql);
             state.setIsValid(false);
             state.setValidationError(e.getMessage());
+            state.recordError("SqlValidatorNode", classifySqlError(e.getMessage()), e.getMessage(),
+                    suggestForSqlError(e.getMessage()), false);
 
             return state.toMap();
         }
+    }
+
+    private String classifySqlError(String error) {
+        if (error == null) return "UNKNOWN";
+        String lower = error.toLowerCase();
+        if (lower.contains("table") && (lower.contains("not found") || lower.contains("不存在"))) return "TABLE_NOT_FOUND";
+        if (lower.contains("column") && (lower.contains("not found") || lower.contains("不存在"))) return "FIELD_NOT_FOUND";
+        if (lower.contains("syntax") || lower.contains("语法")) return "SQL_SYNTAX";
+        return "SQL_SYNTAX";
+    }
+
+    private String suggestForSqlError(String error) {
+        if (error == null) return "请调整问题描述后重试。";
+        String lower = error.toLowerCase();
+        if (lower.contains("table") && (lower.contains("not found") || lower.contains("不存在")))
+            return "查询引用了不存在的表，请检查表名。可用的表有: customers, orders, order_items。";
+        if (lower.contains("column") && (lower.contains("not found") || lower.contains("不存在")))
+            return "查询引用了不存在的字段，请调整问题描述。";
+        return "生成的 SQL 存在语法问题，请调整问题描述后重试。";
     }
 
     /**

@@ -101,10 +101,18 @@ public class ComplexSqlGeneratorNode implements Function<OverAllState, Map<Strin
         } catch (Exception e) {
             log.error("[ComplexSqlGeneratorNode] SQL 生成失败", e);
             state.addLog("[ComplexSqlGeneratorNode] 失败: " + e.getMessage());
+            state.recordError("ComplexSqlGeneratorNode", classifyError(e), e.getMessage(),
+                    "复杂 SQL 生成失败，请尝试简化问题描述或稍后重试。", true);
 
             state.setSql("SELECT 'Error' as MESSAGE");
             return state.toMap();
         }
+    }
+
+    private String classifyError(Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        if (msg.contains("timeout") || msg.contains("connect")) return "NETWORK_ERROR";
+        return "LLM_ERROR";
     }
 
     private String cleanSqlOutput(String sql) {

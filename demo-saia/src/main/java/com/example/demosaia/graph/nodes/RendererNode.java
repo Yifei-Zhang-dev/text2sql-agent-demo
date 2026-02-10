@@ -192,12 +192,20 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
         } catch (Exception e) {
             log.error("[RendererNode] 脚本生成失败", e);
             state.addLog("[RendererNode] 失败: " + e.getMessage());
+            state.recordError("RendererNode", classifyError(e), e.getMessage(),
+                    "可视化脚本生成失败，请稍后重试。", true);
 
             state.setScriptCode(generateErrorScript(e.getMessage()));
             state.setExplanation("脚本生成失败：" + e.getMessage());
 
             return state.toMap();
         }
+    }
+
+    private String classifyError(Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        if (msg.contains("timeout") || msg.contains("connect")) return "NETWORK_ERROR";
+        return "LLM_ERROR";
     }
 
     /**
