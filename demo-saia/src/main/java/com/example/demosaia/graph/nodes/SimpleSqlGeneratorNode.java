@@ -40,6 +40,7 @@ public class SimpleSqlGeneratorNode implements Function<OverAllState, Map<String
             2. 统计查询：使用 COUNT(*)/SUM()/AVG() 等聚合函数
             3. 只生成 SQL，不要解释
             4. 不要使用 ``` 代码块包裹
+            5. 城市名筛选必须用 LIKE 模糊匹配（数据库中城市带"市"后缀，如"北京市"、"上海市"），例如：WHERE CITY LIKE '%北京%'
 
             【示例】
             问题：列出所有客户
@@ -47,6 +48,9 @@ public class SimpleSqlGeneratorNode implements Function<OverAllState, Map<String
 
             问题：订单总金额是多少
             SQL：SELECT SUM(TOTAL_AMOUNT) as TOTAL FROM orders
+
+            问题：查询北京的客户
+            SQL：SELECT * FROM customers WHERE CITY LIKE '%北京%' ORDER BY ID LIMIT 200
 
             【用户问题】
             {question}

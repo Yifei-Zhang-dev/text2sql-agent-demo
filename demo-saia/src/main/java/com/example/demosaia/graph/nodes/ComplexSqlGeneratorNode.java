@@ -45,6 +45,7 @@ public class ComplexSqlGeneratorNode implements Function<OverAllState, Map<Strin
             4. 只生成 SQL，不要解释
             5. 不要使用 ``` 代码块包裹
             6. 产品相关查询必须使用 order_items 表（没有 products 表）
+            7. 城市名筛选必须用 LIKE 模糊匹配（数据库中城市带"市"后缀，如"北京市"、"上海市"），例如：WHERE CITY LIKE '%北京%'
 
             【示例】
             问题：每个客户的订单数
