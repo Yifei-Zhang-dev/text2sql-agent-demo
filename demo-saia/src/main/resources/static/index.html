@@ -210,12 +210,22 @@
         .table-scroll-container {
             max-height: 450px;
             overflow-y: auto;
+            overflow-x: auto;
             border: 1px solid #e8e8e8;
             border-radius: 4px;
+            display: block;
         }
 
         .table-scroll-container .data-table {
             margin-bottom: 0;
+        }
+
+        /* 固定表头：让 thead 粘在滚动容器顶部 */
+        .table-scroll-container .data-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #fafafa;
         }
 
         /* ========== 分页按钮样式（单 Agent 模式） ========== */
@@ -1032,12 +1042,33 @@
                 return;
             }
 
+            // 大数据量处理：超过 15 条时，保留前 14 条，其余合并为"其他"
+            const MAX_PIE_SLICES = 15;
+            let pieData = data;
+            if (data.length > MAX_PIE_SLICES) {
+                // 按 value 降序排序
+                const sorted = [...data].sort((a, b) => (b.value || 0) - (a.value || 0));
+                const top = sorted.slice(0, MAX_PIE_SLICES - 1);
+                const rest = sorted.slice(MAX_PIE_SLICES - 1);
+                const otherValue = rest.reduce((sum, item) => sum + (item.value || 0), 0);
+                top.push({ name: '其他（' + rest.length + '项）', value: otherValue });
+                pieData = top;
+            }
+
             // 创建图表容器，增加高度
             const chartDiv = document.createElement('div');
             chartDiv.style.width = '100%';
             chartDiv.style.height = '500px';
             chartDiv.style.minHeight = '400px';
             container.appendChild(chartDiv);
+
+            // 数据量提示
+            if (data.length > MAX_PIE_SLICES) {
+                const tipDiv = document.createElement('div');
+                tipDiv.className = 'table-footer';
+                tipDiv.textContent = '共 ' + data.length + ' 条数据，仅显示前 ' + (MAX_PIE_SLICES - 1) + ' 项，其余合并为"其他"';
+                container.appendChild(tipDiv);
+            }
 
             // 延迟初始化，确保 DOM 已渲染
             setTimeout(() => {
@@ -1102,7 +1133,7 @@
                                 shadowColor: 'rgba(0, 0, 0, 0.3)'
                             }
                         },
-                        data: data
+                        data: pieData
                     }]
                 };
 
@@ -1169,6 +1200,32 @@
                 const xData = chartData.map(item => item.name);
                 const yData = chartData.map(item => item.value);
 
+                // 大数据量时启用 dataZoom
+                const MAX_DISPLAY = 20;
+                const needZoom = chartData.length > MAX_DISPLAY;
+                const zoomEnd = needZoom ? (MAX_DISPLAY / chartData.length * 100) : 100;
+
+                const dataZoomConfig = needZoom ? [
+                    {
+                        type: 'slider',
+                        show: true,
+                        xAxisIndex: 0,
+                        start: 0,
+                        end: zoomEnd,
+                        bottom: 10,
+                        height: 20,
+                        borderColor: '#d9d9d9',
+                        fillerColor: 'rgba(24, 144, 255, 0.15)',
+                        handleStyle: { color: '#1890ff' }
+                    },
+                    {
+                        type: 'inside',
+                        xAxisIndex: 0,
+                        zoomOnMouseWheel: true,
+                        moveOnMouseMove: true
+                    }
+                ] : [];
+
                 const option = {
                     title: {
                         text: title,
@@ -1192,10 +1249,11 @@
                     grid: {
                         left: '3%',
                         right: '4%',
-                        bottom: '10%',
+                        bottom: needZoom ? '18%' : '10%',
                         top: '18%',
                         containLabel: true
                     },
+                    dataZoom: dataZoomConfig,
                     xAxis: {
                         type: 'category',
                         name: xAxisName,
@@ -1306,6 +1364,11 @@
                 const categories = chartData.map(item => item.name);
                 const values = chartData.map(item => item.value);
 
+                // 大数据量时启用 dataZoom
+                const MAX_DISPLAY = 20;
+                const needZoom = chartData.length > MAX_DISPLAY;
+                const zoomEnd = needZoom ? (MAX_DISPLAY / chartData.length * 100) : 100;
+
                 // 根据是否水平显示决定轴配置
                 const categoryAxis = {
                     type: 'category',
@@ -1327,6 +1390,28 @@
                     splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } }
                 };
 
+                // dataZoom 配置（仅数据量超过阈值时启用）
+                const dataZoomConfig = needZoom ? [
+                    {
+                        type: 'slider',
+                        show: true,
+                        start: 0,
+                        end: zoomEnd,
+                        ...(horizontal
+                            ? { yAxisIndex: 0, right: 10, width: 20 }
+                            : { xAxisIndex: 0, bottom: 10, height: 20 }),
+                        borderColor: '#d9d9d9',
+                        fillerColor: 'rgba(24, 144, 255, 0.15)',
+                        handleStyle: { color: '#1890ff' }
+                    },
+                    {
+                        type: 'inside',
+                        ...(horizontal ? { yAxisIndex: 0 } : { xAxisIndex: 0 }),
+                        zoomOnMouseWheel: true,
+                        moveOnMouseMove: true
+                    }
+                ] : [];
+
                 const option = {
                     title: {
                         text: title,
@@ -1347,10 +1432,11 @@
                     grid: {
                         left: '3%',
                         right: '4%',
-                        bottom: horizontal ? '5%' : '15%',
+                        bottom: needZoom ? (horizontal ? '5%' : '18%') : (horizontal ? '5%' : '15%'),
                         top: '18%',
                         containLabel: true
                     },
+                    dataZoom: dataZoomConfig,
                     xAxis: horizontal ? valueAxis : categoryAxis,
                     yAxis: horizontal ? categoryAxis : valueAxis,
                     series: [{
