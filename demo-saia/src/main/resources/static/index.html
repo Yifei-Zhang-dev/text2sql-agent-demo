@@ -206,7 +206,7 @@
             font-size: 14px;
         }
 
-        /* ========== 表格滚动容器 ========== */
+        /* ========== 表格滚动容器（Graph 模式） ========== */
         .table-scroll-container {
             max-height: 450px;
             overflow-y: auto;
@@ -216,6 +216,41 @@
 
         .table-scroll-container .data-table {
             margin-bottom: 0;
+        }
+
+        /* ========== 分页按钮样式（单 Agent 模式） ========== */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 10px;
+        }
+
+        .pagination-btn {
+            padding: 8px 20px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .pagination-btn:hover {
+            background: #40a9ff;
+        }
+
+        .pagination-btn:disabled {
+            background: #d9d9d9;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            color: #666;
+            font-size: 14px;
         }
 
         /* ========== 数据点组件 ========== */
@@ -374,6 +409,34 @@
 
         console.log('[初始化] 当前模式:', mode);
         console.log('[初始化] API 端点:', API_ENDPOINT);
+
+        // ============================================================
+        // ⭐ 分页状态管理（仅单 Agent 模式使用）
+        // ============================================================
+        const paginationState = {
+            lastQuestion: null,      // 用户原始问题
+            nextCursor: null,        // 下一页游标（列表查询用）
+            prevCursors: [],         // 历史游标栈（用于上一页）
+            hasMore: false,          // 是否还有更多数据
+            currentPage: 0,          // 当前页码（从0开始）
+            queryType: 'list',       // 查询类型：'list' 或 'aggregation'
+            lastScriptCode: null,    // 上次的脚本代码（调试用）
+            lastExplanation: null    // 上次的解释
+        };
+
+        /**
+         * 重置分页状态（新查询时调用）
+         */
+        function resetPaginationState() {
+            paginationState.lastQuestion = null;
+            paginationState.nextCursor = null;
+            paginationState.prevCursors = [];
+            paginationState.hasMore = false;
+            paginationState.currentPage = 0;
+            paginationState.queryType = 'list';
+            paginationState.lastScriptCode = null;
+            paginationState.lastExplanation = null;
+        }
 
         // ============================================================
         // MCP Client 包装器
@@ -543,7 +606,7 @@
         // ============================================================
 
         /**
-         * 处理用户查询
+         * 处理用户查询（首页查询）
          * 1. 调用后端 Agent 获取脚本
          * 2. 执行脚本获取数据
          * 3. 渲染组件显示结果
@@ -555,19 +618,99 @@
                 return;
             }
 
+            // 单 Agent 模式：重置分页状态
+            if (mode !== 'graph') {
+                resetPaginationState();
+                paginationState.lastQuestion = question;
+                paginationState.currentPage = 1;
+            }
+
             await executeQuery(question);
         }
 
         /**
-         * 执行查询的核心逻辑
-         * @param {string} question - 查询问题
+         * 处理下一页查询（仅单 Agent 模式）
+         * 根据查询类型使用不同的分页参数：
+         * - 列表查询：cursor=ID（keyset分页）
+         * - 聚合查询：page=页码（OFFSET分页）
          */
-        async function executeQuery(question) {
+        async function handleNextPage() {
+            if (!paginationState.lastQuestion) {
+                console.warn('[分页] 无法翻页：缺少上下文');
+                return;
+            }
+
+            let paginatedQuestion;
+            const nextPage = paginationState.currentPage + 1;
+
+            if (paginationState.queryType === 'aggregation') {
+                paginatedQuestion = `${paginationState.lastQuestion}\npage=${nextPage}`;
+                console.log('[分页] 聚合查询，请求第', nextPage, '页');
+            } else {
+                if (!paginationState.nextCursor) {
+                    console.warn('[分页] 列表查询缺少cursor');
+                    return;
+                }
+                paginationState.prevCursors.push(paginationState.nextCursor);
+                paginatedQuestion = `${paginationState.lastQuestion}\ncursor=${paginationState.nextCursor}`;
+                console.log('[分页] 列表查询，cursor=', paginationState.nextCursor);
+            }
+
+            paginationState.currentPage = nextPage;
+            console.log('[分页] 请求下一页:', paginatedQuestion);
+            await executeQuery(paginatedQuestion, true);
+        }
+
+        /**
+         * 处理上一页查询（仅单 Agent 模式）
+         * 根据查询类型使用不同的分页参数
+         */
+        async function handlePrevPage() {
+            if (!paginationState.lastQuestion || paginationState.currentPage <= 1) {
+                console.warn('[分页] 无法翻页：已是第一页');
+                return;
+            }
+
+            const prevPage = paginationState.currentPage - 1;
+            let paginatedQuestion;
+
+            if (paginationState.queryType === 'aggregation') {
+                if (prevPage === 1) {
+                    paginatedQuestion = paginationState.lastQuestion;
+                } else {
+                    paginatedQuestion = `${paginationState.lastQuestion}\npage=${prevPage}`;
+                }
+                console.log('[分页] 聚合查询，返回第', prevPage, '页');
+            } else {
+                paginationState.prevCursors.pop();
+                const prevCursor = paginationState.prevCursors.pop();
+
+                if (prevPage === 1 || prevCursor === undefined) {
+                    paginatedQuestion = paginationState.lastQuestion;
+                    paginationState.prevCursors = [];
+                } else {
+                    paginatedQuestion = `${paginationState.lastQuestion}\ncursor=${prevCursor}`;
+                    paginationState.prevCursors.push(prevCursor);
+                }
+                console.log('[分页] 列表查询，返回cursor=', prevCursor);
+            }
+
+            paginationState.currentPage = prevPage;
+            console.log('[分页] 请求上一页:', paginatedQuestion);
+            await executeQuery(paginatedQuestion, true);
+        }
+
+        /**
+         * 执行查询的核心逻辑（首页和分页共用）
+         * @param {string} question - 查询问题（可能包含cursor参数）
+         * @param {boolean} isNextPage - 是否是翻页请求
+         */
+        async function executeQuery(question, isNextPage = false) {
             const resultContainer = document.getElementById('result-container');
             const queryBtn = document.getElementById('query-btn');
 
             // 显示加载状态
-            resultContainer.innerHTML = '<div class="loading">正在查询...</div>';
+            resultContainer.innerHTML = `<div class="loading">${isNextPage ? '正在加载下一页...' : '正在查询...'}</div>`;
             queryBtn.disabled = true;
             queryBtn.textContent = '查询中...';
 
@@ -592,10 +735,42 @@
                     throw new Error('后端未返回脚本代码');
                 }
 
+                // 保存脚本和解释（调试用）
+                if (mode !== 'graph') {
+                    paginationState.lastScriptCode = data.scriptCode;
+                    paginationState.lastExplanation = data.explanation;
+                }
+
                 // 2. 执行 LLM 生成的脚本
                 const { componentType, propertyData } = await executeScript(data.scriptCode);
 
-                // 3. 渲染组件
+                // 3. 更新分页状态（仅单 Agent 模式）
+                if (mode !== 'graph' && componentType === 'Table' && propertyData.pageInfo) {
+                    paginationState.queryType = propertyData.queryType || 'list';
+                    paginationState.hasMore = propertyData.pageInfo.hasMore;
+
+                    if (paginationState.queryType === 'aggregation') {
+                        paginationState.nextCursor = null;
+                        console.log('[分页] 聚合查询状态更新:', {
+                            queryType: 'aggregation',
+                            currentPage: paginationState.currentPage,
+                            hasMore: paginationState.hasMore
+                        });
+                    } else {
+                        paginationState.nextCursor = propertyData.pageInfo.nextCursor;
+                        console.log('[分页] 列表查询状态更新:', {
+                            queryType: 'list',
+                            nextCursor: paginationState.nextCursor,
+                            hasMore: paginationState.hasMore,
+                            currentPage: paginationState.currentPage
+                        });
+                    }
+                } else if (mode !== 'graph') {
+                    paginationState.hasMore = false;
+                    paginationState.queryType = 'list';
+                }
+
+                // 4. 渲染组件
                 renderComponent(componentType, propertyData, data.explanation, data.scriptCode);
 
             } catch (error) {
@@ -687,18 +862,31 @@
 
         /**
          * 渲染表格组件
+         * 根据模式差异化展示：
+         * - Graph 模式：固定高度滚动容器 + 数据量提示
+         * - 单 Agent 模式：普通表格 + 分页按钮
          * @param {HTMLElement} container - 容器元素
-         * @param {Object} data - 表格数据 { columns?, rows }
+         * @param {Object} data - 表格数据 { columns?, rows, pageInfo?, queryType? }
          */
         function renderTable(container, data) {
             console.log('[renderTable] 数据:', data);
 
             // 处理空数据
             if (!data || !data.rows || data.rows.length === 0) {
+                const currentPage = paginationState.currentPage || 1;
+                let emptyMessage = '暂无数据';
+                let emptyHint = '请尝试调整查询条件。';
+
+                if (mode !== 'graph' && currentPage > 1) {
+                    emptyMessage = '已到达数据末尾';
+                    emptyHint = '当前查询范围内没有更多数据了。';
+                }
+
                 container.innerHTML = `
                     <div class="error" style="background: #fffbe6; border-color: #ffe58f; color: #ad8b00;">
-                        <h3 style="margin-bottom: 8px;">暂无数据</h3>
-                        <p>请尝试调整查询条件。</p>
+                        <h3 style="margin-bottom: 8px;">${emptyMessage}</h3>
+                        <p>${emptyHint}</p>
+                        ${mode !== 'graph' && currentPage > 1 ? '<button class="pagination-btn" style="margin-top: 10px;" onclick="handleQuery()">返回第一页</button>' : ''}
                     </div>
                 `;
                 return;
@@ -709,7 +897,6 @@
             let columns = data.columns;
             if (!columns) {
                 const allKeys = Object.keys(data.rows[0]);
-                // 去重：只保留原始列名（优先小写，其次保留第一个出现的）
                 const seen = new Set();
                 columns = allKeys.filter(k => {
                     if (k === 'key') return false;
@@ -720,6 +907,18 @@
                 });
             }
 
+            // 根据模式选择渲染方式
+            if (mode === 'graph') {
+                renderTableWithScroll(container, data, columns);
+            } else {
+                renderTableWithPagination(container, data, columns);
+            }
+        }
+
+        /**
+         * Graph 模式：固定高度滚动容器 + 数据量提示，无分页
+         */
+        function renderTableWithScroll(container, data, columns) {
             let html = '<div class="table-scroll-container">';
             html += '<table class="data-table">';
 
@@ -735,14 +934,9 @@
             data.rows.forEach(row => {
                 html += '<tr>';
                 columns.forEach(col => {
-                    // 尝试多种方式获取值（兼容大小写）
                     let value = row[col];
-                    if (value === null || value === undefined) {
-                        value = row[col.toLowerCase()];
-                    }
-                    if (value === null || value === undefined) {
-                        value = row[col.toUpperCase()];
-                    }
+                    if (value === null || value === undefined) value = row[col.toLowerCase()];
+                    if (value === null || value === undefined) value = row[col.toUpperCase()];
                     html += `<td>${value !== null && value !== undefined ? escapeHtml(String(value)) : '-'}</td>`;
                 });
                 html += '</tr>';
@@ -751,8 +945,75 @@
             html += '</div>';
 
             // 数据量提示
+            html += `<div class="table-footer">共 ${data.rows.length} 条记录</div>`;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 单 Agent 模式：普通表格 + 分页按钮
+         */
+        function renderTableWithPagination(container, data, columns) {
+            let html = '<table class="data-table">';
+
+            // 表头
+            html += '<thead><tr>';
+            columns.forEach(col => {
+                html += `<th>${escapeHtml(String(col))}</th>`;
+            });
+            html += '</tr></thead>';
+
+            // 表体
+            html += '<tbody>';
+            data.rows.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    let value = row[col];
+                    if (value === null || value === undefined) value = row[col.toLowerCase()];
+                    if (value === null || value === undefined) value = row[col.toUpperCase()];
+                    html += `<td>${value !== null && value !== undefined ? escapeHtml(String(value)) : '-'}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            // 分页信息
             const displayCount = data.rows.length;
-            html += `<div class="table-footer">共 ${displayCount} 条记录</div>`;
+            const pageInfo = data.pageInfo || {};
+            const hasMore = pageInfo.hasMore || false;
+            const currentPage = paginationState.currentPage || 1;
+            const queryType = data.queryType || 'list';
+            const hasPrev = currentPage > 1;
+
+            // 计算显示范围
+            const startIndex = (currentPage - 1) * 20 + 1;
+            const endIndex = startIndex + displayCount - 1;
+
+            let footerText;
+            if (queryType === 'aggregation') {
+                footerText = `第 ${currentPage} 页，显示第 ${startIndex}-${endIndex} 条统计结果`;
+            } else {
+                footerText = `第 ${currentPage} 页，显示第 ${startIndex}-${endIndex} 条`;
+            }
+
+            html += `<div class="table-footer">${footerText}</div>`;
+
+            // 分页按钮区域
+            html += `<div class="pagination-container">`;
+
+            if (hasPrev) {
+                html += `<button class="pagination-btn" onclick="handlePrevPage()">← 上一页</button>`;
+            }
+
+            html += `<span class="pagination-info">第 ${currentPage} 页</span>`;
+
+            if (hasMore) {
+                html += `<button class="pagination-btn" onclick="handleNextPage()">下一页 →</button>`;
+            } else if (displayCount > 0) {
+                html += `<span class="pagination-info" style="color: #52c41a;">✓ 已是最后一页</span>`;
+            }
+
+            html += `</div>`;
 
             container.innerHTML = html;
         }
