@@ -33,7 +33,11 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
             {question}
 
             【任务】
-            1. 首先，用中文写一段详细说明（3-5句话），包括：查询目的、数据来源（哪些表）、展示方式（什么组件）、数据量限制（最多200条）。说明写在代码块之前。
+            1. 首先，用中文写一段简洁的说明（1-2句话），放在代码块之前。说明要求：
+               - 用通俗易懂的语言描述查询做了什么、结果用什么方式展示
+               - 禁止使用任何 Markdown 标记（不要用反引号、```、**、# 等）
+               - 禁止提及具体的表名、字段名、SQL 语法、LIMIT 等技术细节
+               - 示例：「查询所有客户的姓名和城市，以表格形式展示，最多显示200条。」
             2. 然后，生成一个 async function generateData(mcpClient) 函数。
             函数必须调用 mcpClient.executeSql(sql) 执行 SQL，然后返回 { componentType, propertyData }。
 

@@ -81,8 +81,7 @@ public class AgentController {
             // 5. 构建响应
             ScriptResponse.ScriptResponseBuilder builder = ScriptResponse.builder()
                     .scriptCode(resultState.getScriptCode())
-                    .explanation(resultState.getExplanation() +
-                                "\n\n[Graph模式] 查询类型: " + resultState.getQueryType())
+                    .explanation(resultState.getExplanation())
                     .executionLog(resultState.getExecutionLog().toString());
 
             // 如果有错误信息，附加到响应
