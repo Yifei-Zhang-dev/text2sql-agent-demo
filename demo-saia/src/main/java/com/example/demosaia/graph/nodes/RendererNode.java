@@ -141,12 +141,20 @@ public class RendererNode implements Function<OverAllState, Map<String, Object>>
             ```
 
             【组件选择指南】
-            - 列表查询（列出所有客户、显示订单等）→ Table
-            - 聚合查询（每个客户的订单数等）→ Table
+            - 优先使用非Table类型的图表
+            - 列表查询（列出所有客户的详细信息、显示订单详细信息等）→ Table
+            - 聚合查询（每个客户的订单详情等）→ Table
             - 单值统计（总数、总金额、平均值等）→ DataPoint
             - 时间趋势（每月、每年的变化）→ LineChart
             - 分类对比/排行（各城市、各产品等）→ BarChart
             - 占比分布（状态分布、类别比例）→ PieChart
+            
+            【图表类型选择指南】
+            - PieChart vs BarChart：PieChart强调"占比/比例"，BarChart强调"对比/排名/排行"
+            - LineChart vs BarChart：LineChart强调"变化趋势"，BarChart强调"静态对比"
+            - 时间相关且关注趋势 → LineChart
+            - 分类对比且关注排名 → BarChart
+            - 部分与整体的关系 → PieChart
 
             【严格要求】
             - 必须用 ```javascript 代码块包裹代码

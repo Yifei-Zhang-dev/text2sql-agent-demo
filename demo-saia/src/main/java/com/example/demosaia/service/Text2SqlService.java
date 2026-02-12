@@ -285,6 +285,7 @@ public class Text2SqlService {
             ```
 
             组件数据格式规范：
+            - 优先使用非Table类型的图表
             - Table（列表查询）: { rows: [{key, ...}], pageInfo: {nextCursor, hasMore} }
             - Table（聚合查询）: { rows: [{key, ...}], queryType: 'aggregation', pageInfo: {currentPage, hasMore} }
             - PieChart: [{name: '名称', value: 数值}, ...]  // 占比分布
