@@ -1797,8 +1797,8 @@
         function getNodeColorClass(nodeName) {
             if (nodeName.includes('Router')) return 'log-node-router';
             if (nodeName.includes('Schema')) return 'log-node-schema';
-            if (nodeName.includes('Sql') || nodeName.includes('SQL')) return 'log-node-sql';
             if (nodeName.includes('Validator')) return 'log-node-validator';
+            if (nodeName.includes('Sql') || nodeName.includes('SQL')) return 'log-node-sql';
             if (nodeName.includes('Renderer')) return 'log-node-renderer';
             if (nodeName.includes('Controller')) return 'log-node-controller';
             return 'log-node-controller';
