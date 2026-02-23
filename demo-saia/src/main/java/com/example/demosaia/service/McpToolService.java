@@ -9,6 +9,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +24,7 @@ import java.util.Map;
 public class McpToolService {
 
     private final WebClient mcpWebClient;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     // 用于跟踪最后执行的 SQL
     private static final ThreadLocal<String> lastExecutedSql = new ThreadLocal<>();
@@ -51,7 +55,7 @@ public class McpToolService {
                                         .flatMap(body -> {
                                             log.error("错误响应体: {}", body);
                                             return Mono.error(new RuntimeException(
-                                                    "HTTP " + clientResponse.statusCode() + ": " + body));
+                                                    extractErrorMessage(body)));
                                         });
                             })
                     .bodyToMono(Map.class)
@@ -65,7 +69,7 @@ public class McpToolService {
             log.error("状态码: {}", e.getStatusCode());
             log.error("响应头: {}", e.getHeaders());
             log.error("响应体: {}", e.getResponseBodyAsString());
-            return "获取表结构失败 [HTTP " + e.getStatusCode() + "]: " + e.getResponseBodyAsString();
+            return "获取表结构失败: " + extractErrorMessage(e.getResponseBodyAsString());
         } catch (Exception e) {
             log.error("=== schema.get 调用异常 ===", e);
             return "获取表结构失败: " + e.getMessage();
@@ -98,7 +102,7 @@ public class McpToolService {
                                         .flatMap(body -> {
                                             log.error("错误响应体: {}", body);
                                             return Mono.error(new RuntimeException(
-                                                    "HTTP " + clientResponse.statusCode() + ": " + body));
+                                                    extractErrorMessage(body)));
                                         });
                             })
                     .bodyToMono(Map.class)
@@ -116,7 +120,7 @@ public class McpToolService {
             log.error("状态码: {}", e.getStatusCode());
             log.error("响应头: {}", e.getHeaders());
             log.error("响应体: {}", e.getResponseBodyAsString());
-            return "SQL 执行失败 [HTTP " + e.getStatusCode() + "]: " + e.getResponseBodyAsString();
+            return "SQL 执行失败: " + extractErrorMessage(e.getResponseBodyAsString());
         } catch (Exception e) {
             log.error("=== sql.run 调用异常 ===", e);
             return "SQL 执行失败: " + e.getMessage();
@@ -220,5 +224,27 @@ public class McpToolService {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * 从 MCP Server 的 JSON 错误响应中提取可读的错误信息
+     * 输入示例: {"timestamp":"...","status":500,"error":"Internal Server Error","message":"Table \"X\" not found","path":"..."}
+     * 输出示例: Table "X" not found
+     */
+    private String extractErrorMessage(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "未知错误";
+        }
+        try {
+            JsonNode json = objectMapper.readTree(responseBody);
+            JsonNode messageNode = json.get("message");
+            if (messageNode != null && !messageNode.asText().isBlank()) {
+                return messageNode.asText();
+            }
+        } catch (Exception e) {
+            log.debug("无法解析错误响应 JSON: {}", e.getMessage());
+        }
+        // JSON 解析失败时返回原始内容
+        return responseBody;
     }
 }

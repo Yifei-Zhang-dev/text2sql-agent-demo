@@ -83,6 +83,8 @@ public class SqlValidatorNode implements Function<OverAllState, Map<String, Obje
     private String classifySqlError(String error) {
         if (error == null) return "UNKNOWN";
         String lower = error.toLowerCase();
+        if (lower.contains("connection refused") || lower.contains("connect timed out")
+                || lower.contains("unreachable") || lower.contains("no route to host")) return "NETWORK_ERROR";
         if (lower.contains("table") && (lower.contains("not found") || lower.contains("不存在"))) return "TABLE_NOT_FOUND";
         if (lower.contains("column") && (lower.contains("not found") || lower.contains("不存在"))) return "FIELD_NOT_FOUND";
         if (lower.contains("syntax") || lower.contains("语法")) return "SQL_SYNTAX";
@@ -92,6 +94,9 @@ public class SqlValidatorNode implements Function<OverAllState, Map<String, Obje
     private String suggestForSqlError(String error) {
         if (error == null) return "请调整问题描述后重试。";
         String lower = error.toLowerCase();
+        if (lower.contains("connection refused") || lower.contains("connect timed out")
+                || lower.contains("unreachable") || lower.contains("no route to host"))
+            return "MCP Server (端口 8083) 连接失败，请确认服务已启动。";
         if (lower.contains("table") && (lower.contains("not found") || lower.contains("不存在")))
             return "查询引用了不存在的表，请检查表名。可用的表有: customers, orders, order_items。";
         if (lower.contains("column") && (lower.contains("not found") || lower.contains("不存在")))
